@@ -19,7 +19,7 @@ public class AiInterpretationService {
     @Value("${openai.api.key}")
     private String apiKey;
 
-    @Value("${openai.model:gpt-4o-mini}")
+    @Value("${openai.model}")
     private String model;
 
     private final RestTemplate restTemplate;  // ← Inject từ config
