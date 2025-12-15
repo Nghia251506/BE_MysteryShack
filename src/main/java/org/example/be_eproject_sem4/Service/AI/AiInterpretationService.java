@@ -1,3 +1,5 @@
+// src/main/java/org/example/be_eproject_sem4/Service/AI/AiInterpretationService.java
+
 package org.example.be_eproject_sem4.Service.AI;
 
 import lombok.RequiredArgsConstructor;
@@ -19,16 +21,17 @@ public class AiInterpretationService {
     @Value("${openai.api.key}")
     private String apiKey;
 
-    @Value("${openai.model}")
+    @Value("${openai.model:gpt-4o-mini}")
     private String model;
 
-    private final RestTemplate restTemplate;  // ← Inject từ config
+    private final RestTemplate restTemplate;
 
-    private static final String PROMPT_TEMPLATE = """
+    // ===================== TAROT =====================
+    private static final String TAROT_PROMPT_TEMPLATE = """
         Bạn là một thầy bói Tarot chuyên nghiệp, ấm áp và sâu sắc.
         Chủ đề khách hỏi: "%s"
         
-        3 lá bài rút được:
+        %s3 lá bài rút được:
         1. %s (%s): %s
         2. %s (%s): %s
         3. %s (%s): %s
@@ -42,10 +45,10 @@ public class AiInterpretationService {
         if (birthday != null) {
             int age = Period.between(birthday, LocalDate.now()).getYears();
             String zodiac = getZodiacSign(birthday);
-            birthdayInfo = String.format("Ngày sinh khách: %s (tuổi %d, cung %s). ", birthday.toString(), age, zodiac);
+            birthdayInfo = String.format("Khách sinh ngày %s (tuổi %d, cung %s). ", birthday, age, zodiac);
         }
 
-        String prompt = String.format(PROMPT_TEMPLATE,
+        String prompt = String.format(TAROT_PROMPT_TEMPLATE,
                 topic,
                 birthdayInfo,
                 cards.get(0).getCard().getNameVi(), cards.get(0).isReversed() ? "ngược" : "xuôi", cards.get(0).getMeaning(),
@@ -53,31 +56,65 @@ public class AiInterpretationService {
                 cards.get(2).getCard().getNameVi(), cards.get(2).isReversed() ? "ngược" : "xuôi", cards.get(2).getMeaning()
         );
 
-        // Tạo headers
+        return callOpenAI(prompt);
+    }
+
+    // ===================== ZODIAC =====================
+    private static final String ZODIAC_PROMPT_TEMPLATE = """
+        Bạn là một nhà chiêm tinh học chuyên nghiệp, ấm áp và truyền cảm hứng.
+        Thông tin khách hàng:
+        - Tên: %s
+        - Giới tính: %s
+        - Ngày sinh: %s
+        - Cung hoàng đạo: %s
+        
+        Hãy đưa ra phân tích chi tiết về cung hoàng đạo này theo các phần sau bằng tiếng Việt, giọng ấm áp, tích cực:
+        
+        ## Tổng quan
+        ## Điểm mạnh
+        ## Điểm yếu
+        ## Tính cách
+        ## Gia đình
+        ## Tình yêu
+        ## Tình dục
+        ## Sự nghiệp
+        
+        Độ dài mỗi phần khoảng 80-120 từ, tổng khoảng 600-800 từ.
+        """;
+
+    public String generateZodiacResponse(String name, String gender, LocalDate birthday, String zodiacNameVi) {
+        String prompt = String.format(ZODIAC_PROMPT_TEMPLATE,
+                name,
+                gender,
+                birthday,
+                zodiacNameVi
+        );
+
+        return callOpenAI(prompt);
+    }
+
+    // ===================== COMMON =====================
+    private String callOpenAI(String prompt) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(apiKey);  // OpenAI dùng Bearer token
+        headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // Request body
         Map<String, Object> requestBody = Map.of(
                 "model", model,
                 "messages", List.of(Map.of("role", "user", "content", prompt)),
                 "temperature", 0.8,
-                "max_tokens", 600
+                "max_tokens", 1500
         );
 
-        // HttpEntity
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            // Gọi OpenAI API
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     "https://api.openai.com/v1/chat/completions",
                     entity,
                     Map.class
             );
 
-            // Parse response
             Map body = response.getBody();
             if (body != null && response.getStatusCode().is2xxSuccessful()) {
                 List<?> choices = (List<?>) body.get("choices");
@@ -86,14 +123,16 @@ public class AiInterpretationService {
                     return (String) message.get("content");
                 }
             }
-            return "Lỗi gọi AI: " + (body != null ? body.get("error") : "Unknown error");
+            return "Lỗi từ AI: " + (body != null ? body.get("error") : "Không có phản hồi");
         } catch (Exception e) {
             return "Lỗi kết nối AI: " + e.getMessage();
         }
     }
+
     private String getZodiacSign(LocalDate birthday) {
         int day = birthday.getDayOfMonth();
         int month = birthday.getMonthValue();
+
         if ((month == 3 && day >= 21) || (month == 4 && day <= 19)) return "Bạch Dương";
         if ((month == 4 && day >= 20) || (month == 5 && day <= 20)) return "Kim Ngưu";
         if ((month == 5 && day >= 21) || (month == 6 && day <= 21)) return "Song Tử";
