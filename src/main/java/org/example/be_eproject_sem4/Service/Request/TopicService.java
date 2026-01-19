@@ -31,7 +31,6 @@ public class TopicService {
     public Topic createTopic(TopicDTO dto) {
         Topic topic = new Topic();
         topic.setName(dto.getName());
-        topic.setNumCards(dto.getNumCards());
         topic.setDescription(dto.getDescription());
 
         return topicRepository.save(topic);
@@ -46,7 +45,6 @@ public class TopicService {
 
         // Cập nhật các trường thông tin
         existingTopic.setName(dto.getName());
-        existingTopic.setNumCards(dto.getNumCards());
         existingTopic.setDescription(dto.getDescription());
 
         return topicRepository.save(existingTopic);

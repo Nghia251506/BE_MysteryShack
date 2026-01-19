@@ -45,7 +45,6 @@ public class ReadingSessionService {
         Topic topic = topicRepository.findById(dto.getTopicId())
                 .orElseThrow(() -> new RuntimeException("Topic ID " + dto.getTopicId() + " không tồn tại"));
 
-        session.setTopic(topic);
         session.setCustomerId(dto.getCustomerId());
         session.setQuestionId(dto.getQuestionId());
         session.setCustomerQuestion(dto.getCustomerQuestion());

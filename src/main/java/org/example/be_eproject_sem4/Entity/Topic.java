@@ -11,10 +11,8 @@ public class Topic {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(length = 100)
+      @Column(length = 100)
     private String name;
-
-    private Integer numCards;
 
     @Column(columnDefinition = "TEXT")
     private String description;

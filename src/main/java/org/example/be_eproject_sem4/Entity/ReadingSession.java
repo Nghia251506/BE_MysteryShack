@@ -17,10 +17,6 @@ public class ReadingSession {
 
     private Long customerId;
 
-    @ManyToOne
-    @JoinColumn(name = "topic_id")
-    private Topic topic;
-
     private Long questionId;
 
     @Column(columnDefinition = "TEXT")

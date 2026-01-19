@@ -5,6 +5,5 @@ import lombok.Data;
 @Data
 public class TopicDTO {
     private String name;
-    private Integer numCards;
     private String description;
 }
