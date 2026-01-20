@@ -4,16 +4,15 @@ import lombok.Data;
 
 import java.util.List;
 
+import org.example.be_eproject_sem4.Entity.TopicQuestion;
+import org.example.be_eproject_sem4.Entity.User;
+
 @Data
 public class ReadingSessionDTO {
-    private Long customerId;
-    private Integer topicId;
-    private Long questionId;
-    private String customerQuestion;
+    private User customer;
+    private TopicQuestion question;
 
     // Bạn có thể để là List<Integer> hoặc Object tùy vào cấu trúc card của bạn
     private List<Object> selectedCards;
-
-    private String summaryMeaning;
     private SessionStatus status;
 }

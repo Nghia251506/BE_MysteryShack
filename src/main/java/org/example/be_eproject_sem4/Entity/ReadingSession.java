@@ -14,19 +14,15 @@ public class ReadingSession {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private Long customerId;
-
-    private Long questionId;
-
-    @Column(columnDefinition = "TEXT")
-    private String customerQuestion;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private User customer;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id")
+    private TopicQuestion question;
 
     @Column(columnDefinition = "JSON")
     private String selectedCards; // Có thể dùng Map hoặc Object tùy cấu hình Hibernate JSON
-
-    @Column(columnDefinition = "TEXT")
-    private String summaryMeaning;
 
     private String status;
 

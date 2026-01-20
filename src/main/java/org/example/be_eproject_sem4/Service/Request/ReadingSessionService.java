@@ -5,6 +5,8 @@ import jakarta.transaction.Transactional;
 import org.example.be_eproject_sem4.Dto.ReadingSessionDTO;
 import org.example.be_eproject_sem4.Entity.ReadingSession;
 import org.example.be_eproject_sem4.Entity.Topic;
+import org.example.be_eproject_sem4.Entity.TopicQuestion;
+import org.example.be_eproject_sem4.Repository.QuestionRepository;
 import org.example.be_eproject_sem4.Repository.ReadingSessionRepository;
 import org.example.be_eproject_sem4.Repository.TopicRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +22,7 @@ public class ReadingSessionService {
     private ReadingSessionRepository sessionRepository;
 
     @Autowired
-    private TopicRepository topicRepository;
+    private QuestionRepository questionRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -42,13 +44,11 @@ public class ReadingSessionService {
         ReadingSession session = new ReadingSession();
 
         // Liên kết Topic
-        Topic topic = topicRepository.findById(dto.getTopicId())
-                .orElseThrow(() -> new RuntimeException("Topic ID " + dto.getTopicId() + " không tồn tại"));
+        TopicQuestion question = questionRepository.findById(dto.getQuestion().getId())
+                .orElseThrow(() -> new RuntimeException("Topic ID " + dto.getQuestion().getId() + " không tồn tại"));
 
-        session.setCustomerId(dto.getCustomerId());
-        session.setQuestionId(dto.getQuestionId());
-        session.setCustomerQuestion(dto.getCustomerQuestion());
-        session.setSummaryMeaning(dto.getSummaryMeaning());
+        session.setCustomer(dto.getCustomer());
+        session.setQuestion(question);
         session.setStatus(dto.getStatus() != null ? dto.getStatus().name() : "PENDING");
 
         // Xử lý chuyển đổi List cards sang chuỗi JSON để lưu vào DB
@@ -65,8 +65,6 @@ public class ReadingSessionService {
     public ReadingSession updateSession(Long id, ReadingSessionDTO dto) {
         ReadingSession existingSession = sessionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiên đọc để cập nhật"));
-
-        existingSession.setSummaryMeaning(dto.getSummaryMeaning());
         existingSession.setStatus(dto.getStatus().name());
 
         if (dto.getSelectedCards() != null) {
