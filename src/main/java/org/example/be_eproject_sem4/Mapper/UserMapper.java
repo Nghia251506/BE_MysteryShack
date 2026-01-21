@@ -1,7 +1,8 @@
 package org.example.be_eproject_sem4.Mapper;
 
 import org.example.be_eproject_sem4.Dto.Auth.LoginRequest;
-import org.example.be_eproject_sem4.Dto.Auth.RegisterRequest;
+import org.example.be_eproject_sem4.Dto.Auth.RegisterRequestDto;
+import org.example.be_eproject_sem4.Dto.Auth.RegisterRequestDto;
 import org.example.be_eproject_sem4.Dto.Auth.UserDto;
 import org.example.be_eproject_sem4.Dto.Auth.MeResponse;
 import org.example.be_eproject_sem4.Dto.Auth.UserUpdateDto;
@@ -13,29 +14,29 @@ import org.springframework.stereotype.Component;
 public class UserMapper {
 
     // Map từ Entity User → MeResponse (thông tin user hiện tại)
-    public MeResponse toMeResponse(User user) {
-        if (user == null) {
-            return null;
-        }
+    // public MeResponse toMeResponse(User user) {
+    //     if (user == null) {
+    //         return null;
+    //     }
 
-        return MeResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .phone(user.getPhone())
-                .role(user.getRole())
-                .bio(user.getBio())
-                .profilePicture(user.getProfilePicture())
-                .isVerified(user.isVerified())
-                .eloScore(user.getEloScore())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
-    }
+    //     return MeResponse.builder()
+    //             .id(user.getId())
+    //             .username(user.getUsername())
+    //             .email(user.getEmail())
+    //             .fullName(user.getFullName())
+    //             .phone(user.getPhone())
+    //             .role(user.getRole())
+    //             .bio(user.getBio())
+    //             .profilePicture(user.getProfilePicture())
+    //             .isVerified(user.isVerified())
+    //             .eloScore(user.getEloScore())
+    //             .createdAt(user.getCreatedAt())
+    //             .updatedAt(user.getUpdatedAt())
+    //             .build();
+    // }
 
     // Map từ RegisterRequest → User entity (khi đăng ký)
-    public User toEntity(RegisterRequest request) {
+    public User toEntity(RegisterRequestDto request) {
         if (request == null) {
             return null;
         }
@@ -87,8 +88,6 @@ public class UserMapper {
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
         dto.setRole(user.getRole().name()); // Hoặc user.getRole()
-        dto.setBio(user.getBio());
-        dto.setProfilePicture(user.getProfilePicture());
         dto.setVerified(user.isVerified());
         dto.setEloScore(user.getEloScore());
         return dto;

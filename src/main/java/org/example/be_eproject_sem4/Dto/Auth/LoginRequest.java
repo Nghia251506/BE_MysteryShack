@@ -1,5 +1,6 @@
 package org.example.be_eproject_sem4.Dto.Auth;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 

@@ -15,6 +15,7 @@ import org.example.be_eproject_sem4.Repository.TopicRepository;
 import org.example.be_eproject_sem4.Repository.UserRepository;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -48,81 +49,130 @@ public class ReadingSessionService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiên đọc ID: " + id));
     }
 
+    public List getMatchedSessionsForReader() {
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        User reader = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader đang đăng nhập"));
+
+        if (!reader.getRole().equals(User.Role.READER)) {
+            throw new RuntimeException("Chỉ reader mới xem được list matched");
+        }
+
+        return sessionRepository.findByReaderAndStatus(reader, "MATCHED");
+    }
+
+    @Transactional
+    public void acceptSession(Long sessionId) {
+        ReadingSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy session"));
+
+        // Kiểm tra reader đang login có phải reader được ghép không
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentReader = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
+
+        if (!session.getReader().equals(currentReader)) {
+            throw new RuntimeException("Bạn không phải reader được ghép cho session này");
+        }
+
+        if (!"MATCHED".equals(session.getStatus())) {
+            throw new RuntimeException("Session không ở trạng thái MATCHED");
+        }
+
+        session.setStatus("ACCEPTED");
+        sessionRepository.save(session);
+
+        // Thông báo cho customer
+        System.out.println("Thông báo cho customer: Request #" + sessionId + " đã được reader chấp nhận.");
+    }
+
+    @Transactional
+    public void rejectSession(Long sessionId) {
+        ReadingSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy session"));
+
+        // Kiểm tra reader đang login
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentReader = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
+
+        if (!session.getReader().equals(currentReader)) {
+            throw new RuntimeException("Bạn không phải reader được ghép cho session này");
+        }
+
+        if (!"MATCHED".equals(session.getStatus())) {
+            throw new RuntimeException("Session không ở trạng thái MATCHED");
+        }
+
+        // Reject: Xóa reader, chuyển về PENDING để hệ thống tìm lại
+        session.setReader(null);
+        session.setStatus("PENDING");
+        sessionRepository.save(session);
+
+        // Tự động tìm reader mới
+        assignReaderToSession(session);
+
+        // Thông báo cho customer
+        System.out.println(
+                "Thông báo cho customer: Reader từ chối request #" + sessionId + ", hệ thống đang tìm reader mới.");
+    }
+
     // 3. Tạo mới một phiên đọc
     @Transactional
     public ReadingSession createSession(ReadingSessionDTO dto) {
         User customer;
 
+        // 1. Lấy thông tin Authentication từ Context (đã được Filter nạp từ Cookie)
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        // Nhánh 1: Đã đăng nhập
-        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
+        // 2. Kiểm tra trạng thái đăng nhập và quyền hạn
+        boolean isAuthenticated = auth != null
+                && auth.isAuthenticated()
+                && !(auth instanceof AnonymousAuthenticationToken);
+
+        if (isAuthenticated) {
+            // Nhánh 1: Đã đăng nhập (Cookie hợp lệ)
             String username = auth.getName();
             customer = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng: " + username));
-        }
-        // Nhánh 2: Chưa đăng nhập (khách vãng lai) → tạo user guest
-        else {
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng: " + username));
+
+            // Log kiểm tra Role nếu cần (Tùy chọn)
+            // boolean isCustomer = auth.getAuthorities().stream()
+            // .anyMatch(a -> a.getAuthority().equals("ROLE_CUSTOMER"));
+        } else {
+            // Nhánh 2: Khách vãng lai (Không có cookie hoặc cookie hết hạn)
             if (dto.getFullName() == null || dto.getFullName().trim().isEmpty()) {
-                throw new IllegalArgumentException("Vui lòng nhập họ tên khi chưa đăng nhập");
+                throw new IllegalArgumentException("Vui lòng đăng nhập hoặc nhập họ tên");
             }
             if (dto.getBirthDate() == null) {
-                throw new IllegalArgumentException("Vui lòng nhập ngày tháng năm sinh khi chưa đăng nhập");
+                throw new IllegalArgumentException("Vui lòng nhập ngày tháng năm sinh");
             }
 
-            // Tạo user guest
+            // Tạo user guest như cũ
             customer = new User();
-            customer.setUsername("guest_" + UUID.randomUUID().toString().substring(0, 8)); // Username tạm unique
+            customer.setUsername("guest_" + UUID.randomUUID().toString().substring(0, 8));
             customer.setFullName(dto.getFullName());
-            // Nếu entity User có field birthDate → set luôn
             customer.setBirthDate(dto.getBirthDate());
-            // Nếu không, lưu tạm vào bio hoặc customerQuestion
-            customer.setBio("Guest - Sinh: " + dto.getBirthDate()); // Lưu tạm vào bio
-            customer.setEmail("guest_" + System.currentTimeMillis() + "@temp.com"); // Email tạm
-            customer.setPasswordHash("guest"); // Không cần pass thật
             customer.setRole(User.Role.CUSTOMER);
-            customer.setVerified(false);
-            customer.setEloScore(1000);
-
-            // LƯU USER GUEST VÀO DB → có ID thật
+            customer.setPasswordHash("guest"); // Pass giả
             customer = userRepository.save(customer);
         }
 
-        // Lấy question
+        // 3. Tiếp tục tạo Session (Giữ nguyên logic của bạn)
         TopicQuestion question = questionRepository.findById(dto.getQuestion())
-                .orElseThrow(() -> new RuntimeException("Câu hỏi ID " + dto.getQuestion() + " không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("Câu hỏi không tồn tại"));
 
-        // Tạo session
         ReadingSession session = new ReadingSession();
-        session.setCustomer(customer); // ← Đã có ID thật (guest hoặc user thật)
+        session.setCustomer(customer);
         session.setQuestion(question);
-        session.setReader(null);
         session.setStatus("PENDING");
 
-        // selectedCards → JSON
-        if (dto.getSelectedCards() == null || dto.getSelectedCards().isEmpty()) {
-            throw new IllegalArgumentException("Danh sách lá bài không được để trống");
-        }
         String jsonCards = objectMapper.writeValueAsString(dto.getSelectedCards());
         session.setSelectedCards(jsonCards);
 
-        // Lưu customerQuestion nếu có
-        // session.setCustomerQuestion(dto.getCustomerQuestion());
-
-        // Save session
         ReadingSession savedSession = sessionRepository.save(session);
-
-        // Ghép reader tự động (nếu muốn)
         assignReaderToSession(savedSession);
-
-        // Thông báo
-        if (customer.getUsername().startsWith("guest_")) {
-            System.out.println("Thông báo cho khách vãng lai (" + dto.getFullName() + "): Request #"
-                    + savedSession.getId() + " tạo thành công.");
-        } else {
-            System.out.println("Thông báo cho khách hàng " + customer.getUsername() + ": Request #"
-                    + savedSession.getId() + " tạo thành công.");
-        }
 
         return savedSession;
     }

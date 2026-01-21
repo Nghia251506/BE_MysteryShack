@@ -6,6 +6,7 @@ import org.example.be_eproject_sem4.Service.Request.ReadingSessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,5 +51,28 @@ public class ReadingSessionController {
     public ResponseEntity<Void> deleteSession(@PathVariable Long id) {
         sessionService.deleteSession(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // 6. Reader xem list request đã matched với mình
+    @GetMapping("/matched")
+    @PreAuthorize("hasRole('READER')")
+    public ResponseEntity<List> getMatchedSessions() {
+        return ResponseEntity.ok(sessionService.getMatchedSessionsForReader());
+    }
+
+    // 7. Reader accept request
+    @PostMapping("/{id}/accept")
+    @PreAuthorize("hasRole('READER')")
+    public ResponseEntity<String> acceptSession(@PathVariable Long id) {
+        sessionService.acceptSession(id);
+        return ResponseEntity.ok("Đã chấp nhận request #" + id);
+    }
+
+    // 8. Reader reject request → chuyển về PENDING để tìm reader khác
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasRole('READER')")
+    public ResponseEntity<String> rejectSession(@PathVariable Long id) {
+        sessionService.rejectSession(id);
+        return ResponseEntity.ok("Đã từ chối request #" + id + ", hệ thống đang tìm reader mới");
     }
 }

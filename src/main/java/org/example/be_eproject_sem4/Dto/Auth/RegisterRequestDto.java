@@ -14,10 +14,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterRequest {
-
+public class RegisterRequestDto {
     @NotBlank(message = "Username không được để trống")
-    @Size(min = 3, max = 50, message = "Username phải từ 3 đến 50 ký tự")
+    @Size(min = 3, max = 50, message = "Username từ 3-50 ký tự")
     private String username;
 
     @NotBlank(message = "Email không được để trống")
@@ -25,14 +24,12 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 6, max = 100, message = "Mật khẩu phải từ 6 ký tự trở lên")
+    @Size(min = 6, message = "Mật khẩu ít nhất 6 ký tự")
     private String password;
 
     @NotBlank(message = "Họ tên không được để trống")
     private String fullName;
 
     private String phone;
-
-    // Role mặc định là CUSTOMER, nếu muốn cho phép đăng ký READER thì thêm field này
-    private User.Role role = User.Role.CUSTOMER;
+    private String role;
 }
