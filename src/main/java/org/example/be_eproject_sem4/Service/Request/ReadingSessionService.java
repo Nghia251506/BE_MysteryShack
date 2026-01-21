@@ -46,7 +46,7 @@ public class ReadingSessionService {
         // Liên kết Topic
         TopicQuestion question = questionRepository.findById(dto.getQuestion().getId())
                 .orElseThrow(() -> new RuntimeException("Topic ID " + dto.getQuestion().getId() + " không tồn tại"));
-
+        session.setReader(dto.getReader());
         session.setCustomer(dto.getCustomer());
         session.setQuestion(question);
         session.setStatus(dto.getStatus() != null ? dto.getStatus().name() : "PENDING");
