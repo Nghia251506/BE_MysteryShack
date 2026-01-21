@@ -1,6 +1,7 @@
 package org.example.be_eproject_sem4.Repository;
 
 import org.example.be_eproject_sem4.Entity.User;
+import org.example.be_eproject_sem4.Entity.User.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,4 +16,5 @@ public interface UserRepository extends JpaRepository<User, Long>{
             "WHERE u.username = :username")
     Optional<User> findByUsername(String username);
     boolean  existsByUsername(String username);
+    User findFirstByRoleAndIsVerifiedOrderByEloScoreDesc(Role reader, boolean b);
 }

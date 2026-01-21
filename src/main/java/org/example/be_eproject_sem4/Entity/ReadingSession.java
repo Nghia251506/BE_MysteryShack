@@ -18,6 +18,9 @@ public class ReadingSession {
     @JoinColumn(name = "customer_id")
     private User customer;
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reader_id")
+    private User reader;
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id")
     private TopicQuestion question;
 

@@ -4,7 +4,9 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "users")
@@ -34,6 +36,8 @@ public class User {
 
     @Column(length = 20)
     private String phone;
+    @Column(name="birthday")
+    private Date BirthDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
