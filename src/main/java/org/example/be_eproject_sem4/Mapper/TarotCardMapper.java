@@ -19,7 +19,6 @@ public class TarotCardMapper {
                 .uprightMeaning(dto.getUprightMeaning())
                 .reversedMeaning(dto.getReversedMeaning())
                 .description(dto.getDescription())
-                .keywords(dto.getKeywords())
                 .isActive(true)
                 .build();
     }
@@ -34,7 +33,6 @@ public class TarotCardMapper {
         if (dto.getUprightMeaning() != null) entity.setUprightMeaning(dto.getUprightMeaning());
         if (dto.getReversedMeaning() != null) entity.setReversedMeaning(dto.getReversedMeaning());
         if (dto.getDescription() != null) entity.setDescription(dto.getDescription());
-        if (dto.getKeywords() != null) entity.setKeywords(dto.getKeywords());
         if (dto.getIsActive() != null) entity.setActive(dto.getIsActive());
     }
 
@@ -50,7 +48,6 @@ public class TarotCardMapper {
                 .uprightMeaning(entity.getUprightMeaning())
                 .reversedMeaning(entity.getReversedMeaning())
                 .description(entity.getDescription())
-                .keywords(entity.getKeywords())
                 .isActive(entity.isActive())
                 .createdDate(entity.getCreatedDate())
                 .updatedDate(entity.getUpdatedDate())

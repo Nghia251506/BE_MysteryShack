@@ -2,10 +2,15 @@ package org.example.be_eproject_sem4.Entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
+import org.example.be_eproject_sem4.Converter.SelectedCardsConverter;
+import org.example.be_eproject_sem4.Dto.SelectedCardDto;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "reading_sessions")
@@ -24,8 +29,11 @@ public class ReadingSession {
     @JoinColumn(name = "question_id")
     private TopicQuestion question;
 
-    @Column(columnDefinition = "JSON")
-    private String selectedCards; // Có thể dùng Map hoặc Object tùy cấu hình Hibernate JSON
+    @Convert(converter = SelectedCardsConverter.class)
+    @Column(name = "selected_cards", columnDefinition = "JSON")
+    private List<SelectedCardDto> selectedCards;
+    @Column(name="match_timeout_at")
+    private LocalDateTime matchTimeoutAt;
 
     private String status;
 

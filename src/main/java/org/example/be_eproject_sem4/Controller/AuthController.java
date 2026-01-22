@@ -21,9 +21,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-public ResponseEntity<AuthResponseDto> login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
-    // Gọi service và truyền response vào để service set cookie
-    AuthResponseDto authResponse = authService.login(loginRequest, response);
-    return ResponseEntity.ok(authResponse);
-}
+    public ResponseEntity<AuthResponseDto> login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
+        // Gọi service và truyền response vào để service set cookie
+        AuthResponseDto authResponse = authService.login(loginRequest, response);
+        return ResponseEntity.ok(authResponse);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletResponse response) {
+        authService.logout(response);
+        return ResponseEntity.ok("Đăng xuất thành công");
+    }
 }

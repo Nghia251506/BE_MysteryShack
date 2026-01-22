@@ -8,5 +8,5 @@ import org.example.be_eproject_sem4.Entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReadingSessionRepository extends JpaRepository<ReadingSession, Long> {
-    List<ReadingSessionSimpleDto> findByReaderAndStatus(User reader, String status);
+    List<ReadingSession> findByReaderAndStatus(User reader, String status);
 }

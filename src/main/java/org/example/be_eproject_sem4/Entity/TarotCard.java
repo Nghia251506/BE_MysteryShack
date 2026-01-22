@@ -47,11 +47,6 @@ public class TarotCard {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;     // Mô tả chi tiết về lá bài
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "tarot_card_keywords", joinColumns = @JoinColumn(name = "tarot_card_id"))
-    @Column(name = "keyword")
-    private Set<String> keywords = new HashSet<>();  // Từ khóa: khởi đầu, phiêu lưu, vô tư...
-
     @Column(name = "created_date", updatable = false)
     private LocalDateTime createdDate;
 

@@ -5,10 +5,13 @@ import jakarta.transaction.Transactional;
 
 import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
 import org.example.be_eproject_sem4.Dto.ReadingSessionDTO;
+import org.example.be_eproject_sem4.Dto.ReadingSessionSimpleDto;
+import org.example.be_eproject_sem4.Dto.SelectedCardDto;
 import org.example.be_eproject_sem4.Entity.ReadingSession;
 import org.example.be_eproject_sem4.Entity.Topic;
 import org.example.be_eproject_sem4.Entity.TopicQuestion;
 import org.example.be_eproject_sem4.Entity.User;
+import org.example.be_eproject_sem4.Mapper.ReadingSessionMapper;
 import org.example.be_eproject_sem4.Repository.QuestionRepository;
 import org.example.be_eproject_sem4.Repository.ReadingSessionRepository;
 import org.example.be_eproject_sem4.Repository.TopicRepository;
@@ -36,7 +39,10 @@ public class ReadingSessionService {
     private QuestionRepository questionRepository;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    private ReadingSessionMapper readingSessionMapper;
 
     // 1. Lấy tất cả các phiên đọc
     public List<ReadingSession> getAllSessions() {
@@ -48,10 +54,11 @@ public class ReadingSessionService {
         return sessionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiên đọc ID: " + id));
     }
-
-    public List getMatchedSessionsForReader() {
+    @Transactional
+    public List<ReadingSessionSimpleDto> getMatchedSessionsForReader() {
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
+
         User reader = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy reader đang đăng nhập"));
 
@@ -59,7 +66,11 @@ public class ReadingSessionService {
             throw new RuntimeException("Chỉ reader mới xem được list matched");
         }
 
-        return sessionRepository.findByReaderAndStatus(reader, "MATCHED");
+        // 1. Lấy Entity từ Repository
+        List<ReadingSession> sessions = sessionRepository.findByReaderAndStatus(reader, "MATCHED");
+
+        // 2. Dùng Mapper chuyển sang DTO trước khi return
+        return readingSessionMapper.toSimpleDtoList(sessions);
     }
 
     @Transactional
@@ -168,8 +179,7 @@ public class ReadingSessionService {
         session.setQuestion(question);
         session.setStatus("PENDING");
 
-        String jsonCards = objectMapper.writeValueAsString(dto.getSelectedCards());
-        session.setSelectedCards(jsonCards);
+        session.setSelectedCards(dto.getSelectedCards());
 
         ReadingSession savedSession = sessionRepository.save(session);
         assignReaderToSession(savedSession);
@@ -208,8 +218,7 @@ public class ReadingSessionService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiên đọc để cập nhật"));
 
         if (dto.getSelectedCards() != null) {
-            String jsonStr = objectMapper.writeValueAsString(dto.getSelectedCards());
-            existingSession.setSelectedCards(jsonStr);
+            existingSession.setSelectedCards(dto.getSelectedCards());
         }
 
         return sessionRepository.save(existingSession);
