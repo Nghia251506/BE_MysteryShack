@@ -4,6 +4,7 @@ import org.example.be_eproject_sem4.Dto.InterpretationResponseDto;
 import org.example.be_eproject_sem4.Dto.InterpretationSubmitDto;
 import org.example.be_eproject_sem4.Service.Interpretation.InterpretationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,5 +31,11 @@ public class InterpretationController {
     public ResponseEntity<String> confirm(@PathVariable Long sessionId) {
         interpretationService.confirmPayment(sessionId);
         return ResponseEntity.ok("Xác nhận thành công! Khách hàng hiện đã xem được bài giải đầy đủ.");
+    }
+
+    @GetMapping("/customer/view/{sessionId}")
+    public ResponseEntity<InterpretationResponseDto> getInterpretationForCustomer(@PathVariable Long sessionId) {
+        InterpretationResponseDto response = interpretationService.getForCustomer(sessionId);
+        return ResponseEntity.ok(response);
     }
 }
