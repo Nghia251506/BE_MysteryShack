@@ -12,7 +12,7 @@ public class ReadingSessionSimpleDto {
     private Long id;
     private String status;
     private String questionName;
-    private List<Long> selectedCards;
+    private List<SelectedCardDto> selectedCards;
     private String fullName;                  // Họ tên (bắt buộc nếu chưa login)
     private Date birthDate;
 }
