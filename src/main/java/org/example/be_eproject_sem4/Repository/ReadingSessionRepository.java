@@ -9,4 +9,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReadingSessionRepository extends JpaRepository<ReadingSession, Long> {
     List<ReadingSession> findByReaderAndStatus(User reader, String status);
+    List<ReadingSession> findByCustomerAndStatus(User customer, String status);
 }
