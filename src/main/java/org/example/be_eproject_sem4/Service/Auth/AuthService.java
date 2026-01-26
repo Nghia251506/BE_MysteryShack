@@ -140,6 +140,7 @@ public class AuthService {
                                                 .email(user.getEmail())
                                                 .fullName(user.getFullName())
                                                 .phone(user.getPhone())
+                                                .birthDate(user.getBirthDate())
                                                 .role(user.getRole().name())
                                                 .isVerified(user.isVerified())
                                                 .eloScore(user.getEloScore())
