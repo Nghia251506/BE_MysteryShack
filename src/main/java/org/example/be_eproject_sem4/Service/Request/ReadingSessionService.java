@@ -81,6 +81,25 @@ public class ReadingSessionService {
     }
 
     @Transactional
+    public List<ReadingSessionSimpleDto> getReadingSessionsForCustomer() {
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        User customer = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader đang đăng nhập"));
+
+        if (!customer.getRole().equals(User.Role.READER)) {
+            throw new RuntimeException("Chỉ reader mới xem được list matched");
+        }
+
+        // 1. Lấy Entity từ Repository
+        List<ReadingSession> sessions = sessionRepository.findByReaderAndStatus(customer, "MATCHED");
+
+        // 2. Dùng Mapper chuyển sang DTO trước khi return
+        return readingSessionMapper.toSimpleDtoList(sessions);
+    }
+
+    @Transactional
     public void acceptSession(Long sessionId) {
         ReadingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy session"));

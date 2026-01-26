@@ -60,6 +60,12 @@ public class ReadingSessionController {
         return ResponseEntity.ok(sessionService.getMatchedSessionsForReader());
     }
 
+    @GetMapping("/customer")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<List> getReadingSessionsForCustomer() {
+        return ResponseEntity.ok(sessionService.getMatchedSessionsForReader());
+    }
+
     // 7. Reader accept request
     @PostMapping("/{id}/accept")
     @PreAuthorize("hasRole('READER')")

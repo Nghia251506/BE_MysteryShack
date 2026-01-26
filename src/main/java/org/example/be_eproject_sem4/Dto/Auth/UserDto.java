@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.example.be_eproject_sem4.Dto.ReadingSessionSimpleDto;
@@ -20,6 +22,7 @@ public class UserDto {
     private String fullName;
     private String phone;
     private String role;
+    private Date birthDate;
     private boolean isVerified;
     private int eloScore;
     private List<ReadingSessionSimpleDto> matchedSessions;

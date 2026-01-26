@@ -46,6 +46,7 @@ public class UserMapper {
                 .email(request.getEmail())
                 .passwordHash(request.getPassword()) // Lưu ý: password sẽ được hash sau ở service
                 .fullName(request.getFullName())
+                .birthDate(request.getBirthDate())
                 .phone(request.getPhone())
                 .role(Role.CUSTOMER) // Mặc định là CUSTOMER khi đăng ký
                 .isVerified(false)   // Chưa verify
@@ -87,6 +88,7 @@ public class UserMapper {
         dto.setFullName(user.getFullName());
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
+        dto.setBirthDate(user.getBirthDate());
         dto.setRole(user.getRole().name()); // Hoặc user.getRole()
         dto.setVerified(user.isVerified());
         dto.setEloScore(user.getEloScore());
