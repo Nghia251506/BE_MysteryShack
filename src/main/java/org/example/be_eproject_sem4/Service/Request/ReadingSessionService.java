@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -29,6 +30,8 @@ import java.util.UUID;
 
 @Service
 public class ReadingSessionService {
+
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
     private ReadingSessionRepository sessionRepository;
@@ -43,6 +46,10 @@ public class ReadingSessionService {
 
     @Autowired
     private ReadingSessionMapper readingSessionMapper;
+
+    ReadingSessionService(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
 
     // 1. Lấy tất cả các phiên đọc
     public List<ReadingSession> getAllSessions() {
@@ -166,7 +173,7 @@ public class ReadingSessionService {
             customer.setFullName(dto.getFullName());
             customer.setBirthDate(dto.getBirthDate());
             customer.setRole(User.Role.CUSTOMER);
-            customer.setPasswordHash("guest"); // Pass giả
+            customer.setPasswordHash(passwordEncoder.encode("guest")); // Pass giả
             customer = userRepository.save(customer);
         }
 
