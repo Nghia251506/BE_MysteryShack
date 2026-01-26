@@ -1,8 +1,10 @@
 package org.example.be_eproject_sem4.Repository;
 
+import org.example.be_eproject_sem4.Entity.Arcana;
 import org.example.be_eproject_sem4.Entity.TarotCard;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,23 +19,21 @@ public interface TarotCardRepository extends JpaRepository<TarotCard, Long> {
     // Tìm theo tên tiếng Anh (unique)
     Optional<TarotCard> findByNameEnIgnoreCase(String nameEn);
 
-    // Tìm theo Arcana
-    List<TarotCard> findByArcana(org.example.be_eproject_sem4.Entity.Arcana arcana);
+    // Tìm theo Arcana (Đã rút gọn import vì đã có import ở trên)
+    List<TarotCard> findByArcana(Arcana arcana);
 
     // Tìm theo suit (Minor Arcana)
     List<TarotCard> findBySuitIgnoreCase(String suit);
 
-    // Tìm kiếm theo keyword trong Set keywords
-    @Query("SELECT tc FROM TarotCard tc JOIN tc.keywords k WHERE LOWER(k) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<TarotCard> findByKeywordContainingIgnoreCase(String keyword);
-
     // Chỉ lấy các lá bài active
     List<TarotCard> findByIsActiveTrue();
 
-    // Tìm kiếm tổng quát (nameEn, nameVi, keyword)
+    /**
+     * Tìm kiếm tổng quát theo tên Tiếng Anh hoặc Tiếng Việt
+     * Đã loại bỏ tìm kiếm theo keyword để tránh lỗi Join ElementCollection
+     */
     @Query("SELECT tc FROM TarotCard tc WHERE tc.isActive = true " +
-            "AND (LOWER(tc.nameEn) LIKE LOWER(CONCAT('%', :query, '%')) " +
-            "OR LOWER(tc.nameVi) LIKE LOWER(CONCAT('%', :query, '%')) " +
-            "OR EXISTS (SELECT 1 FROM tc.keywords k WHERE LOWER(k) LIKE LOWER(CONCAT('%', :query, '%'))))")
-    List<TarotCard> searchActiveCards(String query);
+           "AND (LOWER(tc.nameEn) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "OR LOWER(tc.nameVi) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<TarotCard> searchActiveCards(@Param("query") String query);
 }

@@ -21,7 +21,6 @@ public class TarotCardResponseDto {
     private String uprightMeaning;
     private String reversedMeaning;
     private String description;
-    private Set<String> keywords;
     private boolean isActive;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;

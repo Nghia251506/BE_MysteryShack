@@ -1,62 +1,80 @@
 package org.example.be_eproject_sem4.Entity;
-import lombok.*;
-
 import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Date;
 
 @Entity
-@Data
-@Table(name= "users")
+@Table(name = "users")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
+@ToString(exclude = {"passwordHash"}) // Không show password khi toString
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name="username",unique = true, nullable = false)
+
+    @Column(unique = true, nullable = false, length = 50)
     private String username;
-    @Column(name = "password", nullable = false)
-    private String password;
-    @Column(name="full_name", nullable = false)
-    private String fullname;
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = true;
-    @Column(name = "email", nullable = false, length = 255)
+
+    @Column(unique = true, nullable = false, length = 100)
     private String email;
-    @Column(name = "created_date", updatable = false)
-    private LocalDateTime createdDate;
 
-    @Column(name = "updated_date")
-    private LocalDateTime updatedDate;
+    @Column(name = "password_hash", nullable = false, length = 255)
+    private String passwordHash;
 
-    // Role relationship - now without tenant
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "role_id")
-    private Role role;
+    @Column(name = "full_name", length = 100)
+    private String fullName;
 
-    // ================== PERMISSION ==================
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "user_permission",
-            joinColumns = @JoinColumn(name = "user_id"),               // FK tới users.id
-            inverseJoinColumns = @JoinColumn(name = "permission_id")   // FK tới permissions.id
-    )
-    private Set<Permission> permissions = new HashSet<>();
+    @Column(length = 20)
+    private String phone;
+    @Column(name="birthday")
+    private Date BirthDate;
 
-    @PrePersist
-    public void prePersist() {
-        this.createdDate = LocalDateTime.now();
-        this.updatedDate = LocalDateTime.now();
-        if (this.isActive == null) this.isActive = true;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.CUSTOMER;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(name = "profile_picture", length = 255)
+    private String profilePicture;
+
+    @Column(name = "is_verified", nullable = false)
+    private boolean isVerified = false;
+
+    // Dành riêng cho Reader
+    @Column(name = "elo_score", nullable = false)
+    private int eloScore = 1000;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // Enum cho role
+    public enum Role {
+        CUSTOMER, READER
     }
 
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedDate = LocalDateTime.now();
+    // Helper method để check role (tùy chọn)
+    public boolean isReader() {
+        return this.role == Role.READER;
+    }
+
+    public boolean isCustomer() {
+        return this.role == Role.CUSTOMER;
     }
 }

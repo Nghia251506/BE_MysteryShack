@@ -1,21 +1,26 @@
 package org.example.be_eproject_sem4.Dto.Auth;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.example.be_eproject_sem4.Dto.ReadingSessionSimpleDto;
+import org.example.be_eproject_sem4.Entity.ReadingSession;
 
-import java.time.LocalDate;
 @Data
-@Getter
-@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserDto {
     private Long id;
     private String username;
-    private String password;
-    private String fullname;
-    private Boolean isActive;
     private String email;
-    private String roleName;
-    private LocalDate createdDate;
-    private LocalDate modifiedDate;
+    private String fullName;
+    private String phone;
+    private String role;
+    private boolean isVerified;
+    private int eloScore;
+    private List<ReadingSessionSimpleDto> matchedSessions;
 }
