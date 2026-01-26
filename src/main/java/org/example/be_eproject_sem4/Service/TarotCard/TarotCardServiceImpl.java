@@ -178,7 +178,7 @@ public class TarotCardServiceImpl implements TarotCardService {
         List<TarotCard> deck = filterDeckByTopic(topic);
         List<TarotCard> mutableDeck = new ArrayList<>(deck);
         Collections.shuffle(mutableDeck);
-        return deck.stream().map(TarotCardMapper::toResponseDto).toList();
+        return mutableDeck.stream().map(TarotCardMapper::toResponseDto).toList();
     }
 
     @Override

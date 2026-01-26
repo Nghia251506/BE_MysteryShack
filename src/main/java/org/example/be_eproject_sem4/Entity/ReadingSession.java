@@ -8,6 +8,7 @@ import org.example.be_eproject_sem4.Dto.SelectedCardDto;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
@@ -36,6 +37,10 @@ public class ReadingSession {
     private LocalDateTime matchTimeoutAt;
 
     private String status;
+    @Column(name = "full_name", nullable = true)
+    private String fullName;
+    @Column(name = "birth_date", nullable = true)
+    private LocalDate birthDate;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
