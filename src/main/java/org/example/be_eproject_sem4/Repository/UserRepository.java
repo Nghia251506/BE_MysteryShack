@@ -1,5 +1,6 @@
 package org.example.be_eproject_sem4.Repository;
 
+import org.example.be_eproject_sem4.Dto.Auth.UserDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Entity.User.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,4 +19,6 @@ public interface UserRepository extends JpaRepository<User, Long>{
     boolean  existsByUsername(String username);
     User findFirstByRoleAndIsVerifiedOrderByEloScoreDesc(Role reader, boolean b);
     Object findByEmail(String email);
+
+    Optional<User> findById(Long id);
 }

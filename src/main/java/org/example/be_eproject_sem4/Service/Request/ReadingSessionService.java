@@ -90,9 +90,7 @@ public class ReadingSessionService {
         if (!"MATCHED".equals(session.getStatus())) {
             throw new RuntimeException("Session không ở trạng thái MATCHED");
         }
-
-        session.setStatus("ACCEPTED");
-        sessionRepository.save(session);
+        sessionRepository.updateStatus(sessionId, "ACCEPTED");
 
         // Thông báo cho customer
         System.out.println("Thông báo cho customer: Request #" + sessionId + " đã được reader chấp nhận.");
