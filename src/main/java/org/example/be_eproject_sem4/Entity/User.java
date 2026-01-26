@@ -37,7 +37,7 @@ public class User {
     @Column(length = 20)
     private String phone;
     @Column(name="birthday")
-    private Date BirthDate;
+    private Date birthDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

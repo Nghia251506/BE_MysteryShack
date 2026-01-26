@@ -72,6 +72,7 @@ public class AuthService {
                                 .email(dto.getEmail())
                                 .passwordHash(passwordEncoder.encode(dto.getPassword()))
                                 .fullName(dto.getFullName())
+                                .birthDate(dto.getBirthDate())
                                 .phone(dto.getPhone())
                                 .role(userRole)
                                 .isVerified(false) // Reader cần verify sau
@@ -90,6 +91,7 @@ public class AuthService {
                                                 .email(user.getEmail())
                                                 .fullName(user.getFullName())
                                                 .phone(user.getPhone())
+                                                .birthDate(user.getBirthDate())
                                                 .role(user.getRole().name())
                                                 .isVerified(user.isVerified())
                                                 .eloScore(user.getEloScore())
