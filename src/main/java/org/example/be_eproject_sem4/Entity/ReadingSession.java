@@ -11,7 +11,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "reading_sessions")
@@ -33,7 +35,7 @@ public class ReadingSession {
     @Convert(converter = SelectedCardsConverter.class)
     @Column(name = "selected_cards", columnDefinition = "JSON")
     private List<SelectedCardDto> selectedCards;
-    @Column(name="match_timeout_at")
+    @Column(name = "match_timeout_at")
     private LocalDateTime matchTimeoutAt;
 
     private String status;
@@ -47,4 +49,7 @@ public class ReadingSession {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    private Set<Long> rejectedReaderIds = new HashSet<>();
 }

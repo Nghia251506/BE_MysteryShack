@@ -46,6 +46,9 @@ public class TarotCard {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;     // Mô tả chi tiết về lá bài
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "topic_id")
+    private Topic topic;
 
     @Column(name = "created_date", updatable = false)
     private LocalDateTime createdDate;
@@ -54,6 +57,7 @@ public class TarotCard {
     private LocalDateTime updatedDate;
 
     private boolean isActive = true;  // Có hiển thị hay không
+    
 
     @PrePersist
     protected void onCreate() {

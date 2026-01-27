@@ -1,6 +1,8 @@
 package org.example.be_eproject_sem4.Service.TarotCard;
 
 import lombok.RequiredArgsConstructor;
+
+import org.example.be_eproject_sem4.Dto.Tarot.DrawTarotRequest;
 import org.example.be_eproject_sem4.Dto.Tarot.DrawTarotResponse;
 import org.example.be_eproject_sem4.Dto.Tarot.DrawnCard;
 import org.example.be_eproject_sem4.Dto.Tarot.InterpretSelectedRequest;
@@ -30,6 +32,7 @@ public class TarotCardServiceImpl implements TarotCardService {
 
     private final TarotCardRepository tarotCardRepo;
     private final AiInterpretationService aiService;
+
     @Override
     @Transactional(readOnly = true)
     public Page<TarotCardResponseDto> getAllCards(Pageable pageable) {
@@ -173,17 +176,31 @@ public class TarotCardServiceImpl implements TarotCardService {
 
         return new DrawTarotResponse(drawnCards, aiInterpretation);
     }
+
     @Override
-    public List<TarotCardResponseDto> shuffleAndGetDeck (String topic) {
-        List<TarotCard> deck = filterDeckByTopic(topic);
+    public List<TarotCardResponseDto> shuffleAndGetDeck(DrawTarotRequest request) {
+        // Lấy topic từ trong DTO ra để filter
+        String topicName = request.getTopic();
+
+        // 1. Lọc bài dựa trên topic (Logic cũ của bạn)
+        List<TarotCard> deck = filterDeckByTopic(topicName);
+
+        // 2. Tạo bản sao có thể thay đổi (mutable) để shuffle
         List<TarotCard> mutableDeck = new ArrayList<>(deck);
+
+        // 3. Xáo bài
         Collections.shuffle(mutableDeck);
-        return mutableDeck.stream().map(TarotCardMapper::toResponseDto).toList();
+
+        // 4. Map sang DTO để trả về cho Client
+        return mutableDeck.stream()
+                .map(TarotCardMapper::toResponseDto)
+                .toList();
     }
 
     @Override
-    public DrawTarotResponse interpretSelectedCards(String topic, LocalDate birthday, List<InterpretSelectedRequest.SelectedCard> selected) {
-        if(selected.size() != 3){
+    public DrawTarotResponse interpretSelectedCards(String topic, LocalDate birthday,
+            List<InterpretSelectedRequest.SelectedCard> selected) {
+        if (selected.size() != 3) {
             throw new RuntimeException("Phải chọn đúng 3 lá");
         }
         List<DrawnCard> drawnCards = selected.stream().map(sel -> {

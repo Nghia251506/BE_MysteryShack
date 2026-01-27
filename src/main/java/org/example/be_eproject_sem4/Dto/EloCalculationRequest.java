@@ -12,4 +12,8 @@ public class EloCalculationRequest {
     private double responseTime;      // Giây (để tính P) [cite: 31, 32]
     private boolean isCompleted;      // Trạng thái hoàn thành (để tính C) [cite: 41, 42]
     private int stars;                // Số sao khách chấm (1-5) [cite: 19]
+    public double getPositiveRate() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getPositiveRate'");
+    }
 }

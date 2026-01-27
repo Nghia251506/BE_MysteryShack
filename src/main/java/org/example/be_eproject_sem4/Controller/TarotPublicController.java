@@ -27,36 +27,44 @@ public class TarotPublicController {
 
     private final TarotCardService tarotCardService;
 
-//    @Operation(
-//            summary = "Rút 3 lá Tarot theo chủ đề hỏi",
-//            description = """
-//            Khách gửi chủ đề hỏi → backend tự động:
-//            - Lọc bộ bài phù hợp (Major cho câu hỏi lớn, Minor theo suit cho câu hỏi cụ thể)
-//            - Xáo bài ngẫu nhiên
-//            - Rút 3 lá (random reversed 50%)
-//            - Gọi AI giải nghĩa tổng hợp
-//            Trả về 3 lá + câu giải nghĩa từ AI
-//            """
-//    )
-//    @ApiResponses(value = {
-//            @ApiResponse(responseCode = "200", description = "Rút bài thành công",
-//                    content = @Content(schema = @Schema(implementation = DrawTarotResponse.class))),
-//            @ApiResponse(responseCode = "400", description = "Chủ đề không hợp lệ"),
-//            @ApiResponse(responseCode = "500", description = "Lỗi server hoặc AI")
-//    })
+    // @Operation(
+    // summary = "Rút 3 lá Tarot theo chủ đề hỏi",
+    // description = """
+    // Khách gửi chủ đề hỏi → backend tự động:
+    // - Lọc bộ bài phù hợp (Major cho câu hỏi lớn, Minor theo suit cho câu hỏi cụ
+    // thể)
+    // - Xáo bài ngẫu nhiên
+    // - Rút 3 lá (random reversed 50%)
+    // - Gọi AI giải nghĩa tổng hợp
+    // Trả về 3 lá + câu giải nghĩa từ AI
+    // """
+    // )
+    // @ApiResponses(value = {
+    // @ApiResponse(responseCode = "200", description = "Rút bài thành công",
+    // content = @Content(schema = @Schema(implementation =
+    // DrawTarotResponse.class))),
+    // @ApiResponse(responseCode = "400", description = "Chủ đề không hợp lệ"),
+    // @ApiResponse(responseCode = "500", description = "Lỗi server hoặc AI")
+    // })
     @PostMapping("/shuffle")
-    public ResponseEntity<CommonApiResponse<List<TarotCardResponseDto>>> shuffle(@Valid @RequestBody DrawTarotRequest request) {
-        List<TarotCardResponseDto> shuffledDeck = tarotCardService.shuffleAndGetDeck(request.getTopic());
-        return ResponseEntity.ok(new CommonApiResponse<>(true, "Xáo bài thành công", shuffledDeck));
+    public ResponseEntity<CommonApiResponse<List<TarotCardResponseDto>>> shuffle(
+            @Valid @RequestBody DrawTarotRequest request) {
+        // Truyền nguyên cả object 'request' vào service thay vì chỉ lấy .getTopic()
+        List<TarotCardResponseDto> shuffledDeck = tarotCardService.shuffleAndGetDeck(request);
+
+        return ResponseEntity.ok(new CommonApiResponse<>(
+                true,
+                "Xáo bài thành công cho chủ đề: " + request.getTopic(),
+                shuffledDeck));
     }
 
     @PostMapping("/interpret")
-    public ResponseEntity<CommonApiResponse<DrawTarotResponse>> interpret(@Valid @RequestBody InterpretSelectedRequest request) {
+    public ResponseEntity<CommonApiResponse<DrawTarotResponse>> interpret(
+            @Valid @RequestBody InterpretSelectedRequest request) {
         DrawTarotResponse result = tarotCardService.interpretSelectedCards(
                 request.getTopic(),
                 request.getBirthday(),
-                request.getSelectedCards()
-        );
+                request.getSelectedCards());
         return ResponseEntity.ok(new CommonApiResponse<>(true, "Giải nghĩa thành công", result));
     }
 

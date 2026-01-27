@@ -26,7 +26,9 @@ import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class ReadingSessionService {
@@ -61,6 +63,7 @@ public class ReadingSessionService {
         return sessionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiên đọc ID: " + id));
     }
+
     @Transactional
     public List<ReadingSessionSimpleDto> getMatchedSessionsForReader() {
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -129,30 +132,43 @@ public class ReadingSessionService {
         ReadingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy session"));
 
-        // Kiểm tra reader đang login
-        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentReader = userRepository.findByUsername(auth.getName())
+        // Lấy Reader hiện tại
+        User currentReader = userRepository
+                .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
 
-        if (!session.getReader().equals(currentReader)) {
-            throw new RuntimeException("Bạn không phải reader được ghép cho session này");
-        }
-
-        if (!"MATCHED".equals(session.getStatus())) {
-            throw new RuntimeException("Session không ở trạng thái MATCHED");
-        }
-
-        // Reject: Xóa reader, chuyển về PENDING để hệ thống tìm lại
+        // 1. Cập nhật trạng thái từ chối
+        session.getRejectedReaderIds().add(currentReader.getId());
         session.setReader(null);
         session.setStatus("PENDING");
-        sessionRepository.save(session);
+        sessionRepository.saveAndFlush(session); // Dùng saveAndFlush để đẩy data xuống DB ngay lập tức
 
-        // Tự động tìm reader mới
-        assignReaderToSession(session);
+        // 2. Chạy Async
+        CompletableFuture.runAsync(() -> {
+            try {
+                System.out.println(">>> Đang giữ request 5s trước khi tìm Reader mới...");
+                Thread.sleep(5000);
 
-        // Thông báo cho customer
-        System.out.println(
-                "Thông báo cho customer: Reader từ chối request #" + sessionId + ", hệ thống đang tìm reader mới.");
+                // QUAN TRỌNG: Gọi hàm thông qua một proxy hoặc truy vấn lại
+                // Ở đây tôi gọi trực tiếp hàm xử lý với ID
+                this.processReMatching(sessionId);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+    }
+
+    // Hàm này xử lý việc tìm kiếm lại
+    public void processReMatching(Long sessionId) {
+        // Phải fetch lại từ DB để có dữ liệu mới nhất (bao gồm cả danh sách
+        // rejectedIds)
+        ReadingSession session = sessionRepository.findById(sessionId).orElse(null);
+
+        if (session != null && "PENDING".equals(session.getStatus())) {
+            System.out.println(">>> Bắt đầu tìm Reader mới cho Session: " + sessionId);
+            assignReaderToSession(session);
+        }
     }
 
     // 3. Tạo mới một phiên đọc
@@ -216,24 +232,25 @@ public class ReadingSessionService {
     // Hàm ghép reader tự động (logic đơn giản: chọn reader có ELO cao nhất đang
     // verified)
     private void assignReaderToSession(ReadingSession session) {
-        // Tìm reader có ELO cao nhất, verified, role READER
-        User bestReader = userRepository.findFirstByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role.READER, true);
+        Set<Long> excludeIds = session.getRejectedReaderIds();
+
+        // 1. Lấy tất cả Reader, sau đó lọc ở mức Stream (hoặc sửa Query trong Repo)
+        List<User> readers = userRepository.findAllByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role.READER, true);
+
+        User bestReader = readers.stream()
+                .filter(r -> !excludeIds.contains(r.getId())) // Loại bỏ reader đã từ chối
+                .findFirst()
+                .orElse(null);
 
         if (bestReader != null) {
             session.setReader(bestReader);
             session.setStatus("MATCHED");
             sessionRepository.save(session);
-
-            // Thông báo cho reader
-            System.out.println("Thông báo cho reader " + bestReader.getUsername() + ": Bạn được ghép với request #"
-                    + session.getId());
-
-            // Thông báo cho customer
-            System.out.println("Thông báo cho customer " + session.getCustomer().getUsername()
-                    + ": Request của bạn đã được ghép với reader " + bestReader.getUsername());
+            System.out.println(">>> [RE-MATCH SUCCESS] Assigned " + bestReader.getFullName());
         } else {
-            // Không có reader → để PENDING, sau dùng scheduler tìm lại
-            System.out.println("Không tìm thấy reader nào, session #" + session.getId() + " đang chờ.");
+            session.setStatus("PENDING");
+            sessionRepository.save(session);
+            System.out.println(">>> [MATCHING FAILED] Không còn Reader nào khả dụng.");
         }
     }
 
