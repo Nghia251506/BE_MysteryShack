@@ -32,4 +32,17 @@ public class UserController {
         User result = userService.getRandomTopReaderExcludingMe(readerId);
         return result != null ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        User user = userService.getUserById(id);
+
+        if (user == null) {
+            // Trả về 404 Not Found nếu không tìm thấy User
+            return ResponseEntity.notFound().build();
+        }
+
+        // Trả về 200 OK cùng dữ liệu User
+        return ResponseEntity.ok(user);
+    }
 }
