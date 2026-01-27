@@ -42,4 +42,9 @@ public class UserService {
         Random rand = new Random();
         return subList.get(rand.nextInt(subList.size()));
     }
+
+    public User getUserById(Long id) {
+        // .orElse(null) nghĩa là nếu tìm thấy thì trả về User, không thấy thì trả về null
+        return userRepository.findById(id).orElse(null);
+    }
 }
