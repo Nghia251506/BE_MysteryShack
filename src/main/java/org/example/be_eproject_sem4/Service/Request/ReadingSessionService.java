@@ -25,6 +25,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -121,6 +123,7 @@ public class ReadingSessionService {
         }
 
         session.setStatus("ACCEPTED");
+        session.setAcceptedAt(Instant.now());
         sessionRepository.save(session);
 
         // Thông báo cho customer
@@ -141,6 +144,7 @@ public class ReadingSessionService {
         session.getRejectedReaderIds().add(currentReader.getId());
         session.setReader(null);
         session.setStatus("PENDING");
+        session.setMatchedAt(null);
         sessionRepository.saveAndFlush(session); // Dùng saveAndFlush để đẩy data xuống DB ngay lập tức
 
         // 2. Chạy Async
@@ -161,13 +165,15 @@ public class ReadingSessionService {
 
     // Hàm này xử lý việc tìm kiếm lại
     public void processReMatching(Long sessionId) {
-        // Phải fetch lại từ DB để có dữ liệu mới nhất (bao gồm cả danh sách
-        // rejectedIds)
         ReadingSession session = sessionRepository.findById(sessionId).orElse(null);
 
         if (session != null && "PENDING".equals(session.getStatus())) {
-            System.out.println(">>> Bắt đầu tìm Reader mới cho Session: " + sessionId);
-            assignReaderToSession(session);
+            System.out.println(">>> Tìm Reader mới thay thế cho Session: " + sessionId);
+            // Khi Re-match thì chosenReaderId truyền vào là null để hệ thống tự tìm người
+            // mới
+            assignReaderToSession(session, null);
+            session.setMatchedAt(Instant.now());
+            sessionRepository.save(session);
         }
     }
 
@@ -224,33 +230,43 @@ public class ReadingSessionService {
         session.setSelectedCards(dto.getSelectedCards());
 
         ReadingSession savedSession = sessionRepository.save(session);
-        assignReaderToSession(savedSession);
+        assignReaderToSession(savedSession, dto.getReaderId());
+        session.setMatchedAt(Instant.now());
 
         return savedSession;
     }
 
     // Hàm ghép reader tự động (logic đơn giản: chọn reader có ELO cao nhất đang
     // verified)
-    private void assignReaderToSession(ReadingSession session) {
+    private void assignReaderToSession(ReadingSession session, Long chosenReaderId) {
         Set<Long> excludeIds = session.getRejectedReaderIds();
+        User targetReader = null;
 
-        // 1. Lấy tất cả Reader, sau đó lọc ở mức Stream (hoặc sửa Query trong Repo)
-        List<User> readers = userRepository.findAllByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role.READER, true);
+        // Trường hợp 1: Nếu FE có gửi lên Reader cụ thể
+        if (chosenReaderId != null && !excludeIds.contains(chosenReaderId)) {
+            targetReader = userRepository.findById(chosenReaderId).orElse(null);
+        }
 
-        User bestReader = readers.stream()
-                .filter(r -> !excludeIds.contains(r.getId())) // Loại bỏ reader đã từ chối
-                .findFirst()
-                .orElse(null);
+        // Trường hợp 2: Nếu không có chosenReaderId (hoặc người đó bị trùng trong list
+        // từ chối)
+        // thì mới dùng logic tìm người có Elo cao nhất
+        if (targetReader == null) {
+            List<User> readers = userRepository.findAllByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role.READER, true);
+            targetReader = readers.stream()
+                    .filter(r -> !excludeIds.contains(r.getId()))
+                    .findFirst()
+                    .orElse(null);
+        }
 
-        if (bestReader != null) {
-            session.setReader(bestReader);
+        if (targetReader != null) {
+            session.setReader(targetReader);
             session.setStatus("MATCHED");
             sessionRepository.save(session);
-            System.out.println(">>> [RE-MATCH SUCCESS] Assigned " + bestReader.getFullName());
+            System.out.println(">>> [MATCH SUCCESS] Assigned Reader: " + targetReader.getFullName());
         } else {
             session.setStatus("PENDING");
             sessionRepository.save(session);
-            System.out.println(">>> [MATCHING FAILED] Không còn Reader nào khả dụng.");
+            System.out.println(">>> [MATCH FAILED] Không có Reader khả dụng.");
         }
     }
 

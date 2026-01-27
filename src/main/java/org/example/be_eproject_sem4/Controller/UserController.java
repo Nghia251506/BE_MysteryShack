@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -16,33 +17,27 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    /**
+     * Lấy Reader ngẫu nhiên từ Top Elo.
+     * Hỗ trợ query parameter 'excludeId' để khi nhấn "Đổi Reader" trên FE không bị trùng người cũ.
+     * Ví dụ: /api/users/readers/random-top?excludeId=8
+     */
     @GetMapping("/readers/random-top")
-    public ResponseEntity<User> getRandomTopReader() {
-        User randomReader = userService.getRandomTopReader();
-
-        if (randomReader == null) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<User> getRandomTopReader(@RequestParam(required = false) Long excludeId) {
+        User result;
+        if (excludeId != null) {
+            result = userService.getRandomTopReaderExcludingMe(excludeId);
+        } else {
+            result = userService.getRandomTopReader();
         }
 
-        return ResponseEntity.ok(randomReader);
-    }
-
-    @GetMapping("/readers/random-top/{readerId}")
-    public ResponseEntity<User> getRandomTopReaderExcludingMe(@PathVariable Long readerId) {
-        User result = userService.getRandomTopReaderExcludingMe(readerId);
         return result != null ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();
     }
 
+    // Giữ nguyên để lấy profile chi tiết
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         User user = userService.getUserById(id);
-
-        if (user == null) {
-            // Trả về 404 Not Found nếu không tìm thấy User
-            return ResponseEntity.notFound().build();
-        }
-
-        // Trả về 200 OK cùng dữ liệu User
-        return ResponseEntity.ok(user);
+        return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
     }
 }
