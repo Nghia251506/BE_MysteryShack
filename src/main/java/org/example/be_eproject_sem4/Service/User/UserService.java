@@ -5,6 +5,7 @@ import org.example.be_eproject_sem4.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -13,38 +14,29 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    // Lấy ngẫu nhiên 1 trong những người giỏi nhất (Dùng cho khách vãng lai)
     public User getRandomTopReader() {
-        // 1. Lấy danh sách 10 Reader cao điểm nhất
         List<User> topReaders = userRepository.findTop10ByRoleOrderByEloScoreDesc(User.Role.READER);
-
-        if (topReaders.isEmpty()) {
-            return null;
-        }
-
-        // 2. Lấy ngẫu nhiên 1 trong số các phần tử của danh sách
-        Random rand = new Random();
-        return topReaders.get(rand.nextInt(topReaders.size()));
+        return pickRandom(topReaders);
     }
 
+    // Lấy ngẫu nhiên 1 người giỏi nhưng loại trừ ID cụ thể (Tránh hiện lại chính mình)
     public User getRandomTopReaderExcludingMe(Long currentUserId) {
-        // Lấy danh sách Top Reader cao điểm nhất nhưng trừ ID của tôi ra
-        List<User> topReaders = userRepository.findTop11ByRoleAndIdNotOrderByEloScoreDesc(User.Role.READER, currentUserId);
+        List<User> topReaders = userRepository.findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role.READER, currentUserId);
+        return pickRandom(topReaders);
+    }
 
-        if (topReaders.isEmpty()) {
+    // Hàm phụ để xáo trộn và lấy người đầu tiên
+    private User pickRandom(List<User> readers) {
+        if (readers == null || readers.isEmpty()) {
             return null;
         }
-
-        // Giới hạn lại danh sách chỉ lấy tối đa 10 người sau khi đã loại trừ
-        int limit = Math.min(topReaders.size(), 10);
-        List<User> subList = topReaders.subList(0, limit);
-
-        // Chọn ngẫu nhiên 1 người
-        Random rand = new Random();
-        return subList.get(rand.nextInt(subList.size()));
+        // Xáo trộn danh sách Top 10 để mỗi lần gọi là 1 người khác nhau trong nhóm giỏi nhất
+        Collections.shuffle(readers);
+        return readers.get(0);
     }
 
     public User getUserById(Long id) {
-        // .orElse(null) nghĩa là nếu tìm thấy thì trả về User, không thấy thì trả về null
         return userRepository.findById(id).orElse(null);
     }
 }

@@ -21,6 +21,7 @@ public interface ReadingSessionMapper {
     @Mapping(target = "fullName", source = "customer.fullName")
     @Mapping(target = "birthDate", source = "customer.birthDate")
     @Mapping(target = "selectedCards", source = "selectedCards")
+    @Mapping(target = "matchedAt", source = "matchedAt")
     ReadingSessionSimpleDto toSimpleDto(ReadingSession entity);
 
     List<ReadingSessionSimpleDto> toSimpleDtoList(List<ReadingSession> entities);

@@ -20,7 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long>{
     Object findByEmail(String email);
 
     List<User> findTop10ByRoleOrderByEloScoreDesc(User.Role role);
-    List<User> findTop11ByRoleAndIdNotOrderByEloScoreDesc(User.Role role, Long userId);
+    List<User> findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role role, Long userId);
 
     
 }
