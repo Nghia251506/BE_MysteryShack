@@ -1,6 +1,8 @@
 package org.example.be_eproject_sem4.Entity;
 import jakarta.persistence.*;
 import lombok.*;
+
+import org.checkerframework.checker.units.qual.C;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -55,6 +57,8 @@ public class User {
     // Dành riêng cho Reader
     @Column(name = "elo_score", nullable = false)
     private int eloScore = 1000;
+    @Column(name = "qr_code", columnDefinition = "TEXT")
+    private String QRCode;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

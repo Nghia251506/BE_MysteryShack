@@ -10,6 +10,8 @@ import org.example.be_eproject_sem4.Dto.SelectedCardDto;
 import org.example.be_eproject_sem4.Entity.*;
 import org.example.be_eproject_sem4.Mapper.ReadingSessionMapper;
 import org.example.be_eproject_sem4.Repository.*;
+import org.example.be_eproject_sem4.Service.FCM.FCMService;
+import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -21,7 +23,9 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -47,6 +51,13 @@ public class ReadingSessionService {
 
     @Autowired
     private ReadingSessionMapper readingSessionMapper;
+    @Autowired
+    private FCMService fcmService;
+
+    @Autowired
+    private FcmTokenService fcmTokenService;
+    @Autowired
+    private FcmTokenRepository fcmTokenRepository;
 
     ReadingSessionService(PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
@@ -103,6 +114,7 @@ public class ReadingSessionService {
 
     @Transactional
     public void acceptSession(Long sessionId) {
+        // 1. Tìm session và Reader hiện tại
         ReadingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy session"));
 
@@ -110,6 +122,7 @@ public class ReadingSessionService {
         User currentReader = userRepository.findByUsername(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
 
+        // 2. Kiểm tra quyền và trạng thái (Giữ nguyên logic của bạn)
         if (!session.getReader().equals(currentReader)) {
             throw new RuntimeException("Bạn không phải reader được ghép cho session này");
         }
@@ -117,19 +130,39 @@ public class ReadingSessionService {
             throw new RuntimeException("Session không ở trạng thái MATCHED");
         }
 
-        // Update Session
+        // 3. Cập nhật Session và Lịch sử
         session.setStatus("ACCEPTED");
         session.setAcceptedAt(Instant.now());
         sessionRepository.save(session);
-
-        // UPDATE HISTORY: Chuyển sang IN_PROGRESS
         updateHistoryStatus(sessionId, ReadingStatus.ACCEPTED, currentReader);
+
+        // 4. LOGIC GỬI FCM THỰC THẾ
+        User customer = session.getCustomer(); // Đảm bảo Entity Session có liên kết với Customer
+        String customerToken = fcmTokenService.getTokenByUserId(customer.getId());
+
+        if (customerToken != null) {
+            // Chuẩn bị dữ liệu kèm theo (Data payload)
+            Map<String, String> data = new HashMap<>();
+            data.put("sessionId", sessionId.toString());
+            data.put("type", "SESSION_ACCEPTED");
+
+            // Gọi FCMService để bắn thông báo
+            fcmService.sendPushNotification(
+                    customerToken,
+                    "Yêu cầu đã được chấp nhận!",
+                    "Reader " + currentReader.getFullName() + " đã sẵn sàng xem bài cho bạn.",
+                    data);
+            System.out.println(">>> Đã bắn thông báo FCM tới Customer: " + customer.getUsername());
+        } else {
+            System.out.println(">>> Không tìm thấy Token cho Customer ID: " + customer.getId() + ". Bỏ qua gửi FCM.");
+        }
 
         System.out.println("Thông báo cho customer: Request #" + sessionId + " đã được reader chấp nhận.");
     }
 
     @Transactional
     public void rejectSession(Long sessionId) {
+        // 1. Tìm Session và Reader hiện tại
         ReadingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy session"));
 
@@ -137,20 +170,51 @@ public class ReadingSessionService {
                 .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
 
-        // Update Session
+        // 2. Lưu thông tin khách hàng để gửi thông báo trước khi reset session
+        User customer = session.getCustomer();
+
+        // 3. Cập nhật trạng thái Session (Reject Reader này và quay về PENDING)
         session.getRejectedReaderIds().add(currentReader.getId());
         session.setReader(null);
         session.setStatus("PENDING");
         session.setMatchedAt(null);
         sessionRepository.saveAndFlush(session);
 
-        // UPDATE HISTORY: Reset về PENDING và Xóa Reader khỏi History
+        // 4. Cập nhật lịch sử trạng thái
         updateHistoryStatus(sessionId, ReadingStatus.PENDING, null);
 
-        // Async tìm người mới (giữ nguyên)
+        // --- LUỒNG GỬI FCM CHO KHÁCH HÀNG ---
+        if (customer != null) {
+            // Sử dụng cấu trúc từ FcmTokenService của bạn để lấy danh sách token
+            List<FcmToken> tokens = fcmTokenRepository.findByUserId(customer.getId());
+
+            if (tokens != null && !tokens.isEmpty()) {
+                // Chuẩn bị dữ liệu đính kèm (data payload)
+                Map<String, String> notificationData = Map.of(
+                        "sessionId", String.valueOf(sessionId),
+                        "type", "SESSION_REJECTED",
+                        "status", "PENDING");
+
+                String title = "Reader đã từ chối yêu cầu";
+                String body = "Reader " + currentReader.getFullName()
+                        + " hiện không thể tham gia. Hệ thống đang tìm Reader khác cho bạn...";
+
+                // Lặp qua danh sách token để gửi đến tất cả thiết bị của khách hàng
+                tokens.forEach(fcmToken -> {
+                    fcmService.sendPushNotification(
+                            fcmToken.getToken(),
+                            title,
+                            body,
+                            notificationData);
+                });
+            }
+        }
+
+        // 5. Chạy Async để tìm Reader mới sau 5 giây
         CompletableFuture.runAsync(() -> {
             try {
-                System.out.println(">>> Đang giữ request 5s trước khi tìm Reader mới...");
+                // System.out.println(">>> Reader từ chối. Đang đợi 5s để tìm người mới cho
+                // Session: " + sessionId);
                 Thread.sleep(5000);
                 this.processReMatching(sessionId);
             } catch (InterruptedException e) {
@@ -180,7 +244,8 @@ public class ReadingSessionService {
 
         // --- Logic xác thực user (giữ nguyên) ---
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isAuthenticated = auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken);
+        boolean isAuthenticated = auth != null && auth.isAuthenticated()
+                && !(auth instanceof AnonymousAuthenticationToken);
 
         if (isAuthenticated) {
             String username = auth.getName();
@@ -235,14 +300,11 @@ public class ReadingSessionService {
         Set<Long> excludeIds = session.getRejectedReaderIds();
         User targetReader = null;
 
-        // Trường hợp 1: Nếu FE có gửi lên Reader cụ thể
+        // 1. Logic tìm Reader (giữ nguyên)
         if (chosenReaderId != null && !excludeIds.contains(chosenReaderId)) {
             targetReader = userRepository.findById(chosenReaderId).orElse(null);
         }
 
-        // Trường hợp 2: Nếu không có chosenReaderId (hoặc người đó bị trùng trong list
-        // từ chối)
-        // thì mới dùng logic tìm người có Elo cao nhất
         if (targetReader == null) {
             List<User> readers = userRepository.findAllByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role.READER, true);
             targetReader = readers.stream()
@@ -252,14 +314,47 @@ public class ReadingSessionService {
         }
 
         if (targetReader != null) {
+            // 2. Cập nhật DB
             session.setReader(targetReader);
             session.setStatus("MATCHED");
+            session.setMatchedAt(Instant.now());
             sessionRepository.save(session);
             System.out.println(">>> [MATCH SUCCESS] Assigned Reader: " + targetReader.getFullName());
+
+            // --- GỬI THÔNG BÁO CHO READER ---
+            sendNotificationToUser(
+                    targetReader,
+                    "Yêu cầu mới!",
+                    "Khách hàng " + session.getCustomer().getFullName() + " đang chờ kết nối với bạn.",
+                    String.valueOf(session.getId()),
+                    "NEW_MATCHING_REQUEST");
+
+            // --- GỬI THÔNG BÁO CHO KHÁCH HÀNG (CUSTOMER) ---
+            sendNotificationToUser(
+                    session.getCustomer(),
+                    "Đã tìm thấy Reader!",
+                    "Reader " + targetReader.getFullName() + " đã sẵn sàng. Hãy vào trò chuyện ngay!",
+                    String.valueOf(session.getId()),
+                    "READER_FOUND");
+
         } else {
             session.setStatus("PENDING");
             sessionRepository.save(session);
             System.out.println(">>> [MATCH FAILED] Không có Reader khả dụng.");
+        }
+    }
+
+    /**
+     * Hàm bổ trợ để tái sử dụng logic gửi thông báo cho User bất kỳ (Reader hoặc
+     * Customer)
+     */
+    private void sendNotificationToUser(User user, String title, String body, String sessionId, String type) {
+        List<FcmToken> tokens = fcmTokenRepository.findByUserId(user.getId());
+        if (tokens != null && !tokens.isEmpty()) {
+            Map<String, String> data = Map.of(
+                    "sessionId", sessionId,
+                    "type", type);
+            tokens.forEach(t -> fcmService.sendPushNotification(t.getToken(), title, body, data));
         }
     }
 
@@ -284,7 +379,6 @@ public class ReadingSessionService {
         }
         sessionRepository.deleteById(id);
     }
-
 
     private void updateHistoryStatus(Long sessionId, ReadingStatus newStatus, User reader) {
         History history = historyRepository.findByRequestId(sessionId).orElse(null);

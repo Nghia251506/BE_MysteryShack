@@ -25,5 +25,8 @@ public class UserDto {
     private Date birthDate;
     private boolean isVerified;
     private int eloScore;
+    private String bio;
+    private String profilePicture;
+    private String qrCode;
     private List<ReadingSessionSimpleDto> matchedSessions;
 }

@@ -90,6 +90,9 @@ public class UserMapper {
         dto.setPhone(user.getPhone());
         dto.setBirthDate(user.getBirthDate());
         dto.setRole(user.getRole().name()); // Hoặc user.getRole()
+        dto.setBio(user.getBio());
+        dto.setProfilePicture(user.getProfilePicture());
+        dto.setQrCode(user.getQRCode());
         dto.setVerified(user.isVerified());
         dto.setEloScore(user.getEloScore());
         return dto;

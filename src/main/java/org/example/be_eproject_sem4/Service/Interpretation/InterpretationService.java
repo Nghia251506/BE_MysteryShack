@@ -1,12 +1,19 @@
 package org.example.be_eproject_sem4.Service.Interpretation;
 
+import java.util.List;
+import java.util.Map;
+
 import org.example.be_eproject_sem4.Dto.InterpretationResponseDto;
 import org.example.be_eproject_sem4.Dto.InterpretationSubmitDto;
 import org.example.be_eproject_sem4.Entity.*;
 import org.example.be_eproject_sem4.Mapper.InterpretationMapper;
+import org.example.be_eproject_sem4.Repository.FcmTokenRepository;
 import org.example.be_eproject_sem4.Repository.HistoryRepository;
 import org.example.be_eproject_sem4.Repository.InterpretationFormRepository;
 import org.example.be_eproject_sem4.Repository.ReadingSessionRepository;
+import org.example.be_eproject_sem4.Service.FCM.FCMService;
+import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +27,9 @@ public class InterpretationService {
     private final ReadingSessionRepository sessionRepository;
     private final InterpretationMapper interpretationMapper;
     private final HistoryRepository historyRepository;
+    private final FCMService fcmService;
+    private final FcmTokenService fcmTokenService;
+    private final FcmTokenRepository fcmTokenRepository;
 
     /**
      * Reader nộp bài luận giải cho 3 lá bài kèm lời khuyên và QR
@@ -34,7 +44,7 @@ public class InterpretationService {
             throw new RuntimeException("Đơn hàng phải ở trạng thái ACCEPTED mới có thể nộp bài.");
         }
 
-        // 2. Tạo Form luận giải mới (Logic cũ của bạn)
+        // 2. Tạo Form luận giải mới
         InterpretationForm form = new InterpretationForm();
         form.setRequestId(session);
         form.setInterpretation1(dto.getInterpretation1());
@@ -47,40 +57,61 @@ public class InterpretationService {
             throw new RuntimeException("Nội dung luận giải lá bài 1 không được để trống.");
         }
 
-        // Cập nhật trạng thái Form và Session
         form.setStatus(InterpretationStatus.SENT_TO_CUSTOMER);
-        session.setStatus("INTERPRETED"); // Session chuyển sang trạng thái chờ thanh toán
+        session.setStatus("INTERPRETED");
 
-        // Lưu Form
         InterpretationForm savedForm = formRepository.save(form);
 
-        // ==================================================================
-        // 3. LOGIC MỚI: CẬP NHẬT HISTORY ĐỂ READER RẢNH TAY
-        // ==================================================================
-
-        // Tìm History dựa trên Session ID (Giả sử trong History có trường request link với Session)
+        // 3. Cập nhật History
         History history = historyRepository.findByRequestId(sessionId)
-                .orElseGet(() -> {
-                    // Nếu không tìm thấy (cho các session cũ), ta chủ động tạo mới
-                    return History.builder()
-                            .customer(session.getCustomer())
-                            .question(session.getQuestion())
-                            .request(session)
-                            .reader(session.getReader()) // Lấy reader từ session
-                            .createdAt(java.time.LocalDateTime.now())
-                            .build();
-                });
+                .orElseGet(() -> History.builder()
+                        .customer(session.getCustomer())
+                        .question(session.getQuestion())
+                        .request(session)
+                        .reader(session.getReader())
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build());
 
-        // Gắn Form vào History
         history.setInterpretationForm(savedForm);
         history.setStatus(ReadingStatus.WAITING_PAYMENT);
-
-// 3. Lưu lại (Lệnh save này sẽ xử lý cả Update hoặc Insert mới)
         historyRepository.save(history);
 
         // ==================================================================
+        // 4. LOGIC FCM: THÔNG BÁO CHO CẢ READER VÀ CUSTOMER
+        // ==================================================================
+
+        // A. Thông báo cho Reader (Xác nhận thành công)
+        sendNotificationToUser(
+                session.getReader(),
+                "Nộp bài thành công!",
+                "Luận giải của bạn đã được gửi đến khách hàng. Đang chờ thanh toán.",
+                String.valueOf(sessionId),
+                "INTERPRETATION_SUBMITTED");
+
+        // B. Thông báo cho Khách hàng (Báo có kết quả)
+        sendNotificationToUser(
+                session.getCustomer(),
+                "Đã có kết quả luận giải!",
+                "Reader " + session.getReader().getFullName() + " đã gửi luận giải cho bạn. Hãy vào xem ngay!",
+                String.valueOf(sessionId),
+                "INTERPRETATION_RECEIVED");
 
         return interpretationMapper.toDto(savedForm);
+    }
+
+    /**
+     * Tái sử dụng hàm bổ trợ đã viết ở các luồng trước
+     */
+    private void sendNotificationToUser(User user, String title, String body, String sessionId, String type) {
+        if (user == null)
+            return;
+        List<FcmToken> tokens = fcmTokenRepository.findByUserId(user.getId());
+        if (tokens != null && !tokens.isEmpty()) {
+            Map<String, String> data = Map.of(
+                    "sessionId", sessionId,
+                    "type", type);
+            tokens.forEach(t -> fcmService.sendPushNotification(t.getToken(), title, body, data));
+        }
     }
 
     /**
@@ -89,7 +120,7 @@ public class InterpretationService {
     public InterpretationResponseDto getForCustomer(Long sessionId) {
         InterpretationForm form = formRepository.findByRequestIdId(sessionId)
                 .orElseThrow(() -> new RuntimeException("Bài luận giải chưa sẵn sàng."));
-        
+
         return interpretationMapper.toDto(form);
     }
 
