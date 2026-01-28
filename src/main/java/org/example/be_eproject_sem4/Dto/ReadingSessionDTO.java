@@ -12,6 +12,7 @@ import org.example.be_eproject_sem4.Entity.User;
 @Data
 public class ReadingSessionDTO {
     private Long question;           // ID của TopicQuestion
+    private Long readerId;          // ID của Reader (nếu có chọn trước)
     private List<SelectedCardDto> selectedCards; // Mảng ID lá bài (Long)
     private String customerQuestion; // Optional
     // Field chỉ dùng khi chưa đăng nhập (khách vãng lai)

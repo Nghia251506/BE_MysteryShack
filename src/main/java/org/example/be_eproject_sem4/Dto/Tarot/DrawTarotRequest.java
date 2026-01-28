@@ -14,5 +14,4 @@ public class DrawTarotRequest {
 
     @NotBlank(message = "Chủ đề hỏi không được để trống")
     private String topic;  // "tình yêu", "công việc", "tài chính", "tổng quát"...
-    private LocalDate birthday;
 }

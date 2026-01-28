@@ -16,6 +16,11 @@ public interface UserRepository extends JpaRepository<User, Long>{
             "WHERE u.username = :username")
     Optional<User> findByUsername(String username);
     boolean  existsByUsername(String username);
-    User findFirstByRoleAndIsVerifiedOrderByEloScoreDesc(Role reader, boolean b);
+    List<User> findAllByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role role, boolean isVerified);
     Object findByEmail(String email);
+
+    List<User> findTop10ByRoleOrderByEloScoreDesc(User.Role role);
+    List<User> findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role role, Long userId);
+
+    
 }

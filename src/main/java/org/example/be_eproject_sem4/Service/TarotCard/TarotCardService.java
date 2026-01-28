@@ -50,6 +50,6 @@ public interface TarotCardService {
     // Đếm số lá bài active
     long countActiveCards();
     DrawTarotResponse drawThreeCardsByTopic(String topic, LocalDate birthday);
-    List<TarotCardResponseDto> shuffleAndGetDeck(String topic);
+    List<TarotCardResponseDto> shuffleAndGetDeck(DrawTarotRequest request);
     DrawTarotResponse interpretSelectedCards(String topic, LocalDate birthday, List<InterpretSelectedRequest.SelectedCard> selected);
 }

@@ -1,9 +1,11 @@
 package org.example.be_eproject_sem4.Mapper;
 
+import org.example.be_eproject_sem4.Dto.Tarot.DrawTarotRequest;
 import org.example.be_eproject_sem4.Dto.TarotCard.CreateTarotCardDto;
 import org.example.be_eproject_sem4.Dto.TarotCard.TarotCardResponseDto;
 import org.example.be_eproject_sem4.Dto.TarotCard.UpdateTarotCardDto;
 import org.example.be_eproject_sem4.Entity.TarotCard;
+import org.example.be_eproject_sem4.Entity.Topic;
 import org.example.be_eproject_sem4.Entity.Arcana;
 
 public class TarotCardMapper {
@@ -53,4 +55,11 @@ public class TarotCardMapper {
                 .updatedDate(entity.getUpdatedDate())
                 .build();
     }
+
+     public static DrawTarotRequest toDrawRequestDto(Topic topic) {
+        DrawTarotRequest dto = new DrawTarotRequest();
+        dto.setTopic(topic.getName());
+        return dto;
+}
+
 }

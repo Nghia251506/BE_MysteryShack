@@ -1,5 +1,7 @@
 package org.example.be_eproject_sem4.Dto;
 
+import java.util.List;
+
 import org.example.be_eproject_sem4.Entity.InterpretationStatus;
 
 import lombok.Data;
@@ -7,11 +9,27 @@ import lombok.Data;
 @Data
 public class InterpretationResponseDto {
     private Long id;
-    private String interpretation1; // Khách luôn thấy
-    private String interpretation2; // Ẩn nếu chưa PAID
-    private String interpretation3; // Ẩn nếu chưa PAID
-    private String advice;          // Ẩn nếu chưa PAID
-    private String qrPayment;       // Khách thấy để quét
+    private String interpretation1;
+    private String interpretation2;
+    private String interpretation3;
+    private String advice;
+    private String qrPayment;
     private InterpretationStatus status;
     private Long sessionId;
+
+    // 1. Thông tin Reader
+    private ReaderInfo reader;
+
+    // 2. Thông tin câu hỏi
+    private String questionContent;
+
+    // 3. Danh sách lá bài
+    private List<SelectedCardDto> selectedCards;
+
+    @Data
+    public static class ReaderInfo {
+        private Long id;
+        private String fullName;
+        private String avatar;
+    }
 }

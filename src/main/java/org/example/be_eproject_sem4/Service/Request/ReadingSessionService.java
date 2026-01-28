@@ -25,8 +25,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class ReadingSessionService {
@@ -61,6 +65,7 @@ public class ReadingSessionService {
         return sessionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiên đọc ID: " + id));
     }
+
     @Transactional
     public List<ReadingSessionSimpleDto> getMatchedSessionsForReader() {
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -75,6 +80,25 @@ public class ReadingSessionService {
 
         // 1. Lấy Entity từ Repository
         List<ReadingSession> sessions = sessionRepository.findByReaderAndStatus(reader, "MATCHED");
+
+        // 2. Dùng Mapper chuyển sang DTO trước khi return
+        return readingSessionMapper.toSimpleDtoList(sessions);
+    }
+
+    @Transactional
+    public List<ReadingSessionSimpleDto> getReadingSessionsForCustomer() {
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        User customer = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader đang đăng nhập"));
+
+        if (!customer.getRole().equals(User.Role.READER)) {
+            throw new RuntimeException("Chỉ reader mới xem được list matched");
+        }
+
+        // 1. Lấy Entity từ Repository
+        List<ReadingSession> sessions = sessionRepository.findByReaderAndStatus(customer, "MATCHED");
 
         // 2. Dùng Mapper chuyển sang DTO trước khi return
         return readingSessionMapper.toSimpleDtoList(sessions);
@@ -99,6 +123,7 @@ public class ReadingSessionService {
         }
 
         session.setStatus("ACCEPTED");
+        session.setAcceptedAt(Instant.now());
         sessionRepository.save(session);
 
         // Thông báo cho customer
@@ -110,30 +135,46 @@ public class ReadingSessionService {
         ReadingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy session"));
 
-        // Kiểm tra reader đang login
-        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentReader = userRepository.findByUsername(auth.getName())
+        // Lấy Reader hiện tại
+        User currentReader = userRepository
+                .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
 
-        if (!session.getReader().equals(currentReader)) {
-            throw new RuntimeException("Bạn không phải reader được ghép cho session này");
-        }
-
-        if (!"MATCHED".equals(session.getStatus())) {
-            throw new RuntimeException("Session không ở trạng thái MATCHED");
-        }
-
-        // Reject: Xóa reader, chuyển về PENDING để hệ thống tìm lại
+        // 1. Cập nhật trạng thái từ chối
+        session.getRejectedReaderIds().add(currentReader.getId());
         session.setReader(null);
         session.setStatus("PENDING");
-        sessionRepository.save(session);
+        session.setMatchedAt(null);
+        sessionRepository.saveAndFlush(session); // Dùng saveAndFlush để đẩy data xuống DB ngay lập tức
 
-        // Tự động tìm reader mới
-        assignReaderToSession(session);
+        // 2. Chạy Async
+        CompletableFuture.runAsync(() -> {
+            try {
+                System.out.println(">>> Đang giữ request 5s trước khi tìm Reader mới...");
+                Thread.sleep(5000);
 
-        // Thông báo cho customer
-        System.out.println(
-                "Thông báo cho customer: Reader từ chối request #" + sessionId + ", hệ thống đang tìm reader mới.");
+                // QUAN TRỌNG: Gọi hàm thông qua một proxy hoặc truy vấn lại
+                // Ở đây tôi gọi trực tiếp hàm xử lý với ID
+                this.processReMatching(sessionId);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+    }
+
+    // Hàm này xử lý việc tìm kiếm lại
+    public void processReMatching(Long sessionId) {
+        ReadingSession session = sessionRepository.findById(sessionId).orElse(null);
+
+        if (session != null && "PENDING".equals(session.getStatus())) {
+            System.out.println(">>> Tìm Reader mới thay thế cho Session: " + sessionId);
+            // Khi Re-match thì chosenReaderId truyền vào là null để hệ thống tự tìm người
+            // mới
+            assignReaderToSession(session, null);
+            session.setMatchedAt(Instant.now());
+            sessionRepository.save(session);
+        }
     }
 
     // 3. Tạo mới một phiên đọc
@@ -189,32 +230,43 @@ public class ReadingSessionService {
         session.setSelectedCards(dto.getSelectedCards());
 
         ReadingSession savedSession = sessionRepository.save(session);
-        assignReaderToSession(savedSession);
+        assignReaderToSession(savedSession, dto.getReaderId());
+        session.setMatchedAt(Instant.now());
 
         return savedSession;
     }
 
     // Hàm ghép reader tự động (logic đơn giản: chọn reader có ELO cao nhất đang
     // verified)
-    private void assignReaderToSession(ReadingSession session) {
-        // Tìm reader có ELO cao nhất, verified, role READER
-        User bestReader = userRepository.findFirstByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role.READER, true);
+    private void assignReaderToSession(ReadingSession session, Long chosenReaderId) {
+        Set<Long> excludeIds = session.getRejectedReaderIds();
+        User targetReader = null;
 
-        if (bestReader != null) {
-            session.setReader(bestReader);
+        // Trường hợp 1: Nếu FE có gửi lên Reader cụ thể
+        if (chosenReaderId != null && !excludeIds.contains(chosenReaderId)) {
+            targetReader = userRepository.findById(chosenReaderId).orElse(null);
+        }
+
+        // Trường hợp 2: Nếu không có chosenReaderId (hoặc người đó bị trùng trong list
+        // từ chối)
+        // thì mới dùng logic tìm người có Elo cao nhất
+        if (targetReader == null) {
+            List<User> readers = userRepository.findAllByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role.READER, true);
+            targetReader = readers.stream()
+                    .filter(r -> !excludeIds.contains(r.getId()))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (targetReader != null) {
+            session.setReader(targetReader);
             session.setStatus("MATCHED");
             sessionRepository.save(session);
-
-            // Thông báo cho reader
-            System.out.println("Thông báo cho reader " + bestReader.getUsername() + ": Bạn được ghép với request #"
-                    + session.getId());
-
-            // Thông báo cho customer
-            System.out.println("Thông báo cho customer " + session.getCustomer().getUsername()
-                    + ": Request của bạn đã được ghép với reader " + bestReader.getUsername());
+            System.out.println(">>> [MATCH SUCCESS] Assigned Reader: " + targetReader.getFullName());
         } else {
-            // Không có reader → để PENDING, sau dùng scheduler tìm lại
-            System.out.println("Không tìm thấy reader nào, session #" + session.getId() + " đang chờ.");
+            session.setStatus("PENDING");
+            sessionRepository.save(session);
+            System.out.println(">>> [MATCH FAILED] Không có Reader khả dụng.");
         }
     }
 
