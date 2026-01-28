@@ -2,12 +2,19 @@ package org.example.be_eproject_sem4.Entity;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Data
 @Table(name = "interpretation_forms")
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class InterpretationForm {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,6 +22,10 @@ public class InterpretationForm {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id")
     private ReadingSession requestId;
+    @OneToOne
+    @JoinColumn(name = "history_id", referencedColumnName = "id")
+    @JsonIgnore // Ngắt vòng lặp JSON khi API trả về
+    private History history;
     @Column(name = "interpretation_1", columnDefinition = "TEXT")
     private String interpretation1; // Luận giải cho lá 1
 
@@ -33,7 +44,7 @@ public class InterpretationForm {
     private LocalDateTime createdAt;
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
 
     @PrePersist
     protected void onCreate() {

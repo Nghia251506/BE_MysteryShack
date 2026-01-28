@@ -1,5 +1,6 @@
 package org.example.be_eproject_sem4.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -7,6 +8,7 @@ import org.example.be_eproject_sem4.Converter.SelectedCardsConverter;
 import org.example.be_eproject_sem4.Dto.SelectedCardDto;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.example.be_eproject_sem4.Entity.ReadingStatus;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -32,6 +34,11 @@ public class ReadingSession {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "question_id")
     private TopicQuestion question;
+
+    @OneToOne
+    @JoinColumn(name = "history_id", referencedColumnName = "id")
+    @JsonIgnore // Ngắt vòng lặp JSON khi API trả về
+    private History history;
 
     @Convert(converter = SelectedCardsConverter.class)
     @Column(name = "selected_cards", columnDefinition = "JSON")
