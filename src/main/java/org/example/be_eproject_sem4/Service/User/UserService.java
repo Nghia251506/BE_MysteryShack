@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
@@ -53,6 +54,27 @@ public class UserService {
         // Đảo ngược trạng thái: !true = false, !false = true
         user.setActive(!user.isActive());
 
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User updateFullnameAndBirthdate(Long id, String fullName, Date birthDate) {
+        // 1. Tìm User trực tiếp từ database
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với ID: " + id));
+
+        // 2. Cập nhật thủ công (Manual Update) thay vì dùng Mapper
+        // Kiểm tra null để tránh ghi đè dữ liệu cũ bằng null nếu client không gửi lên
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            user.setFullName(fullName);
+        }
+
+        if (birthDate != null) {
+            user.setBirthDate(birthDate);
+        }
+
+        // 3. Lưu thực thể đã cập nhật
+        // Spring Data JPA sẽ tự động hiểu đây là lệnh update nhờ vào @Id
         return userRepository.save(user);
     }
 }
