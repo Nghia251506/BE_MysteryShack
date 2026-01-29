@@ -94,6 +94,7 @@ public class UserMapper {
         dto.setProfilePicture(user.getProfilePicture());
         dto.setQrCode(user.getQRCode());
         dto.setVerified(user.isVerified());
+        dto.setActive(user.isActive());
         dto.setEloScore(user.getEloScore());
         return dto;
     }

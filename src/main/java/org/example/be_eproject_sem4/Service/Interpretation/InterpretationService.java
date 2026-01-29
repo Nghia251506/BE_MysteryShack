@@ -74,6 +74,7 @@ public class InterpretationService {
 
         history.setInterpretationForm(savedForm);
         history.setStatus(ReadingStatus.WAITING_PAYMENT);
+        history.setInterpretationForm(form);
         historyRepository.save(history);
 
         // ==================================================================

@@ -28,5 +28,6 @@ public class UserDto {
     private String bio;
     private String profilePicture;
     private String qrCode;
+    private boolean isActive;
     private List<ReadingSessionSimpleDto> matchedSessions;
 }

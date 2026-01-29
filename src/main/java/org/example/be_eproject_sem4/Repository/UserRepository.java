@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.io.Reader;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,7 @@ public interface UserRepository extends JpaRepository<User, Long>{
 
     List<User> findTop10ByRoleOrderByEloScoreDesc(User.Role role);
     List<User> findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role role, Long userId);
+    // Optional<Reader> findByUserId(Long userId);
 
     
 }

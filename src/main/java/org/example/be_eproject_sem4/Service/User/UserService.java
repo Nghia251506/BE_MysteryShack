@@ -5,6 +5,8 @@ import org.example.be_eproject_sem4.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -20,9 +22,11 @@ public class UserService {
         return pickRandom(topReaders);
     }
 
-    // Lấy ngẫu nhiên 1 người giỏi nhưng loại trừ ID cụ thể (Tránh hiện lại chính mình)
+    // Lấy ngẫu nhiên 1 người giỏi nhưng loại trừ ID cụ thể (Tránh hiện lại chính
+    // mình)
     public User getRandomTopReaderExcludingMe(Long currentUserId) {
-        List<User> topReaders = userRepository.findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role.READER, currentUserId);
+        List<User> topReaders = userRepository.findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role.READER,
+                currentUserId);
         return pickRandom(topReaders);
     }
 
@@ -31,12 +35,24 @@ public class UserService {
         if (readers == null || readers.isEmpty()) {
             return null;
         }
-        // Xáo trộn danh sách Top 10 để mỗi lần gọi là 1 người khác nhau trong nhóm giỏi nhất
+        // Xáo trộn danh sách Top 10 để mỗi lần gọi là 1 người khác nhau trong nhóm giỏi
+        // nhất
         Collections.shuffle(readers);
         return readers.get(0);
     }
 
     public User getUserById(Long id) {
         return userRepository.findById(id).orElse(null);
+    }
+
+    @Transactional
+    public User toggleStatus(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Đảo ngược trạng thái: !true = false, !false = true
+        user.setActive(!user.isActive());
+
+        return userRepository.save(user);
     }
 }

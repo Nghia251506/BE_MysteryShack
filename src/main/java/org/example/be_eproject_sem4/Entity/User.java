@@ -59,6 +59,8 @@ public class User {
     private int eloScore = 1000;
     @Column(name = "qr_code", columnDefinition = "TEXT")
     private String QRCode;
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

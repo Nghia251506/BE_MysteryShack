@@ -40,7 +40,7 @@ public class History {
     @JoinColumn(name = "request_id")
     private ReadingSession request;
 
-    @OneToOne(mappedBy = "history", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "history", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private InterpretationForm interpretationForm;
 
     @Enumerated(EnumType.STRING)

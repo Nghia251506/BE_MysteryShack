@@ -18,6 +18,7 @@ public class HistoryController {
 
     private final HistoryRepository historyRepository;
     private final UserRepository userRepository;
+    private final org.example.be_eproject_sem4.Service.History.HistoryService historyService;
 
     /**
      * 1. GET /api/v1/histories/my-history
@@ -26,8 +27,8 @@ public class HistoryController {
     @GetMapping("/my-history")
     public ResponseEntity<List<History>> getMyHistory() {
         User currentUser = getCurrentUser();
-        // Lấy lịch sử theo User ID, sắp xếp mới nhất trước
-        List<History> histories = historyRepository.findByCustomerIdOrderByCreatedAtDesc(currentUser.getId());
+        // Không cần check role, cứ thấy có ID trong đơn là lấy
+        List<History> histories = historyRepository.findByUserId(currentUser.getId());
         return ResponseEntity.ok(histories);
     }
 
@@ -62,7 +63,8 @@ public class HistoryController {
 
         // --- CHECK QUYỀN TRUY CẬP ---
         boolean isOwner = history.getCustomer().getId().equals(currentUser.getId());
-        boolean isAssignedReader = history.getReader() != null && history.getReader().getId().equals(currentUser.getId());
+        boolean isAssignedReader = history.getReader() != null
+                && history.getReader().getId().equals(currentUser.getId());
 
         if (!isOwner && !isAssignedReader) {
             return ResponseEntity.status(403).body("Bạn không có quyền xem chi tiết đơn hàng này.");
@@ -87,13 +89,15 @@ public class HistoryController {
         // Tìm History dựa vào sessionId (request_id trong DB)
         // Lưu ý: Đảm bảo HistoryRepository đã có hàm findByRequestId
         History history = historyRepository.findByRequestId(sessionId)
-                .orElseThrow(() -> new RuntimeException("Chưa tìm thấy dữ liệu lịch sử cho phiên này (Session ID: " + sessionId + ")"));
+                .orElseThrow(() -> new RuntimeException(
+                        "Chưa tìm thấy dữ liệu lịch sử cho phiên này (Session ID: " + sessionId + ")"));
 
         // --- CHECK QUYỀN (SECURITY) ---
         // 1. Là khách hàng của đơn này
         boolean isOwner = history.getCustomer().getId().equals(currentUser.getId());
 
-        // 2. Là Reader được gán cho đơn này (cần check null vì lúc đầu có thể chưa có Reader)
+        // 2. Là Reader được gán cho đơn này (cần check null vì lúc đầu có thể chưa có
+        // Reader)
         boolean isAssignedReader = history.getReader() != null
                 && history.getReader().getId().equals(currentUser.getId());
 
@@ -102,5 +106,14 @@ public class HistoryController {
         }
 
         return ResponseEntity.ok(history);
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<?> getRecentHistory() {
+        User currentUser = getCurrentUser(); // Hàm lấy user từ SecurityContext của bạn
+
+        List<History> recentHistories = historyService.getRecentHistory(currentUser);
+
+        return ResponseEntity.ok(recentHistories);
     }
 }

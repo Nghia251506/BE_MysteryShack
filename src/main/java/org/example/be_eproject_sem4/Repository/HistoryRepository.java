@@ -28,21 +28,20 @@ public interface HistoryRepository extends JpaRepository<History, Long> {
     // Lọc theo trạng thái (VD: Khách muốn xem các đơn "Đang chờ" hoặc "Đã xong")
     List<History> findByCustomerIdAndStatus(Long customerId, ReadingStatus status);
 
-
     // ==========================================
     // 2. NHÓM HÀM CHO READER (NGƯỜI ĐỌC BÀI)
     // ==========================================
 
     // Lấy danh sách việc CỦA TÔI (Reader đã nhận)
-    List<History> findByReaderIdOrderByCreatedAtDesc(Long readerId);
 
-    // Lọc việc của tôi theo trạng thái (VD: Reader muốn xem đơn nào đang PENDING để làm gấp)
+    // Lọc việc của tôi theo trạng thái (VD: Reader muốn xem đơn nào đang PENDING để
+    // làm gấp)
     List<History> findByReaderIdAndStatus(Long readerId, ReadingStatus status);
 
-    // QUAN TRỌNG: Tìm các đơn hàng "VÔ CHỦ" (Chưa có Reader nhận) để Reader vào nhận việc ("Vợt khách")
+    // QUAN TRỌNG: Tìm các đơn hàng "VÔ CHỦ" (Chưa có Reader nhận) để Reader vào
+    // nhận việc ("Vợt khách")
     // Điều kiện: reader là null VÀ status là PENDING
     List<History> findByReaderIsNullAndStatus(ReadingStatus status);
-
 
     // ==========================================
     // 3. NHÓM HÀM THỐNG KÊ & KHÁC
@@ -57,4 +56,20 @@ public interface HistoryRepository extends JpaRepository<History, Long> {
 
     // Tìm chi tiết lịch sử theo Session (Nếu bạn muốn link từ ReadingSession sang)
     Optional<History> findByRequestId(Long sessionId);
+
+    @Query("SELECT h FROM History h WHERE h.customer.id = :userId OR h.reader.id = :userId ORDER BY h.createdAt DESC")
+    List<History> findByUserId(@Param("userId") Long userId);
+
+    // Tìm 10 bản ghi mới nhất của Customer
+    List<History> findTop10ByCustomerIdOrderByCreatedAtDesc(Long customerId);
+
+    // Tìm 10 bản ghi mới nhất của Reader
+    List<History> findTop10ByReaderIdOrderByCreatedAtDesc(Long readerId);
+
+    // Hoặc dùng Pageable để linh hoạt hơn (Khuyên dùng)
+    @Query("SELECT h FROM History h WHERE h.customer.id = :userId OR h.reader.id = :userId")
+    List<History> findRecentHistory(@Param("userId") Long userId, Pageable pageable);
+
+    // Thêm dòng này để hỗ trợ Reader
+    List<History> findByReaderIdOrderByCreatedAtDesc(Long readerId);
 }
