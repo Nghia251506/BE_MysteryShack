@@ -2,24 +2,19 @@ package org.example.be_eproject_sem4.Controller;
 
 import java.util.Map;
 
-import org.example.be_eproject_sem4.Dto.StatusRequest;
 import org.example.be_eproject_sem4.Entity.User;
-import org.example.be_eproject_sem4.Security.CustomUserDetailsService;
 import org.example.be_eproject_sem4.Service.User.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.transaction.Transactional;
-
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/users")
@@ -48,7 +43,7 @@ public class UserController {
         return result != null ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();
     }
 
-    // Giữ nguyên để lấy profile chi tiết
+    // lấy profile chi tiết
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         User user = userService.getUserById(id);
