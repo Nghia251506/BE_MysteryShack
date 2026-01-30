@@ -38,4 +38,10 @@ public class InterpretationController {
         InterpretationResponseDto response = interpretationService.getForCustomer(sessionId);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/{sessionId}/notify-paid")
+    public ResponseEntity<?> notifyPaid(@PathVariable Long sessionId) {
+        interpretationService.customerNotifyPaid(sessionId);
+        return ResponseEntity.ok("Đã gửi thông báo thanh toán cho Reader.");
+    }
 }

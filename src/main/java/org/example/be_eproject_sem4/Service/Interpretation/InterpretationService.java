@@ -13,6 +13,7 @@ import org.example.be_eproject_sem4.Repository.InterpretationFormRepository;
 import org.example.be_eproject_sem4.Repository.ReadingSessionRepository;
 import org.example.be_eproject_sem4.Service.FCM.FCMService;
 import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
+import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class InterpretationService {
     private final FCMService fcmService;
     private final FcmTokenService fcmTokenService;
     private final FcmTokenRepository fcmTokenRepository;
+    private final NotificationManager notificationManager;
 
     /**
      * Reader nộp bài luận giải cho 3 lá bài kèm lời khuyên và QR
@@ -51,7 +53,6 @@ public class InterpretationService {
         form.setInterpretation2(dto.getInterpretation2());
         form.setInterpretation3(dto.getInterpretation3());
         form.setAdvice(dto.getAdvice());
-        form.setQrPayment(dto.getQrPayment());
 
         if (dto.getInterpretation1() == null || dto.getInterpretation1().trim().isEmpty()) {
             throw new RuntimeException("Nội dung luận giải lá bài 1 không được để trống.");
@@ -149,5 +150,39 @@ public class InterpretationService {
 
         formRepository.save(form);
         sessionRepository.save(session);
+        Long customerId = session.getCustomer().getId();
+        notificationManager.notifyCustomerPaymentConfirmed(customerId, sessionId);
+    }
+
+    /**
+     * Khách hàng ấn nút "Tôi đã thanh toán"
+     * Cập nhật trạng thái để Reader biết và bắn thông báo Push
+     */
+    @Transactional
+    public void customerNotifyPaid(Long sessionId) {
+        // 1. Tìm Form luận giải
+        InterpretationForm form = formRepository.findByRequestIdId(sessionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy form luận giải."));
+
+        // 2. Cập nhật trạng thái Form sang PAID (Chờ xác nhận)
+        // Lưu ý: Bạn có thể thêm InterpretationStatus.PAID vào Enum của mình
+        form.setStatus(InterpretationStatus.PAID);
+        formRepository.save(form);
+
+        // 3. Cập nhật trạng thái History để Reader thấy màu sắc thay đổi trong danh
+        // sách
+        History history = historyRepository.findByRequestId(sessionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch sử phiên dịch."));
+        // history.setStatus(ReadingStatus.PAID); // Nếu bạn có status này ở History
+        historyRepository.save(history);
+
+        // 4. BẮN THÔNG BÁO CHO READER
+        // Lấy thông tin Reader từ Session
+        ReadingSession session = form.getRequestId();
+        if (session.getReader() != null) {
+            notificationManager.notifyReaderPaymentSent(
+                    session.getReader().getId(),
+                    sessionId);
+        }
     }
 }

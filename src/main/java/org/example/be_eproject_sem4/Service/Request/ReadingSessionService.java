@@ -333,7 +333,7 @@ public class ReadingSessionService {
             sendNotificationToUser(
                     session.getCustomer(),
                     "Đã tìm thấy Reader!",
-                    "Reader " + targetReader.getFullName() + " đã sẵn sàng. Hãy vào trò chuyện ngay!",
+                    "Reader " + targetReader.getFullName() + " đã sẵn sàng. Hãy kiên nhẫn chờ cho đến khi Reader chấp nhận!",
                     String.valueOf(session.getId()),
                     "READER_FOUND");
 

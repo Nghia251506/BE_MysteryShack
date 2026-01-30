@@ -2,17 +2,14 @@ package org.example.be_eproject_sem4.Controller;
 
 import java.util.Map;
 
+import org.example.be_eproject_sem4.Dto.Auth.UpdateProfileRequest;
+import org.example.be_eproject_sem4.Dto.Auth.UserDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Service.User.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import jakarta.transaction.Transactional;
 
@@ -66,5 +63,13 @@ public class UserController {
                 "success", true,
                 "newStatus", updatedUser.isActive(),
                 "message", "Đã đổi sang " + (updatedUser.isActive() ? "ONLINE" : "OFFL`INE")));
+    }
+
+    @PatchMapping("/booking-info/{id}")
+    public ResponseEntity<User> patchUserProfile(
+            @PathVariable Long id,
+            @RequestBody UpdateProfileRequest request) {
+        User updated = userService.updateFullnameAndBirthdate(id, request.getFullName(), request.getBirthDate());
+        return ResponseEntity.ok(updated);
     }
 }

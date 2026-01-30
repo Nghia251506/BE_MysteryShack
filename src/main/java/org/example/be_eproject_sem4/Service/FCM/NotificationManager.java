@@ -63,4 +63,45 @@ public class NotificationManager {
             });
         }
     }
+
+    // 4. Thông báo cho Reader khi Khách hàng ấn "Tôi đã thanh toán"
+    public void notifyReaderPaymentSent(Long readerId, Long sessionId) {
+        // Lấy danh sách token của Reader
+        List<FcmToken> tokens = tokenRepository.findByUserId(readerId);
+        
+        if (!tokens.isEmpty()) {
+            tokens.forEach(t -> {
+                fcmService.sendPushNotification(
+                    t.getToken(), 
+                    "Khách đã thanh toán! 🧧", 
+                    "Khách hàng vừa xác nhận đã chuyển khoản. Hãy kiểm tra tài khoản và xác nhận ngay.", 
+                    Map.of(
+                        "type", "PAYMENT_NOTIFICATION", 
+                        "sessionId", sessionId.toString(),
+                        "action", "CHECK_BANK_ACCOUNT"
+                    )
+                );
+            });
+        }
+    }
+
+    // 5. Thông báo cho Khách khi Reader xác nhận đã nhận tiền (Unlock bài)
+    public void notifyCustomerPaymentConfirmed(Long customerId, Long sessionId) {
+        // Lấy danh sách token của Khách hàng
+        List<FcmToken> tokens = tokenRepository.findByUserId(customerId);
+        
+        if (!tokens.isEmpty()) {
+            tokens.forEach(t -> {
+                fcmService.sendPushNotification(
+                    t.getToken(), 
+                    "Thanh toán thành công! ✨", 
+                    "Giao dịch đã được Reader xác nhận. Nội dung luận giải đã được mở khóa.", 
+                    Map.of(
+                        "type", "PAYMENT_CONFIRMED", 
+                        "sessionId", sessionId.toString()
+                    )
+                );
+            });
+        }
+    }
 }

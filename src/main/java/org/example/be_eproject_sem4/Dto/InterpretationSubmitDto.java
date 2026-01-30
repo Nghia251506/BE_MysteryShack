@@ -8,5 +8,4 @@ public class InterpretationSubmitDto {
     private String interpretation2;
     private String interpretation3;
     private String advice;
-    private String qrPayment;
 }
