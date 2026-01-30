@@ -53,7 +53,18 @@ public class InterpretationService {
         form.setInterpretation2(dto.getInterpretation2());
         form.setInterpretation3(dto.getInterpretation3());
         form.setAdvice(dto.getAdvice());
+        if (session.getReader() != null) {
+            // Ưu tiên lấy QR trực tiếp từ hồ sơ Reader trong Database
+            form.setQrPayment(session.getReader().getQRCode());
+        } else if (dto.getQrPayment() != null) {
+            // Nếu hồ sơ không có thì mới lấy từ DTO nộp lên
+            form.setQrPayment(dto.getQrPayment().getQRCode());
+        }
 
+        // Kiểm tra lại lần cuối trước khi lưu
+        if (form.getQrPayment() == null) {
+            throw new RuntimeException("Reader chưa cập nhật mã QR thanh toán!");
+        }
         if (dto.getInterpretation1() == null || dto.getInterpretation1().trim().isEmpty()) {
             throw new RuntimeException("Nội dung luận giải lá bài 1 không được để trống.");
         }

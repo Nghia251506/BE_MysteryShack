@@ -141,6 +141,8 @@ public class AuthService {
                                                 .fullName(user.getFullName())
                                                 .phone(user.getPhone())
                                                 .birthDate(user.getBirthDate())
+                                                .profilePicture(user.getProfilePicture())
+                                                .qrCode(user.getQRCode())
                                                 .role(user.getRole().name())
                                                 .isVerified(user.isVerified())
                                                 .eloScore(user.getEloScore())

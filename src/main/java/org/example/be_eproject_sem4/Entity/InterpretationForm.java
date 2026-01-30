@@ -36,6 +36,8 @@ public class InterpretationForm {
     private String interpretation3; // Luận giải cho lá 3
     @Column(name = "advice")
     private String advice;
+    @Column(name =  "qr_payment", columnDefinition = "LONGTEXT" )
+    private String qrPayment;
     @Column(name = "status")
     private InterpretationStatus status;
     @Column(name = "created_at")

@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.example.be_eproject_sem4.Entity.TopicQuestion;
+import org.example.be_eproject_sem4.Entity.User;
 
 import lombok.*;
 @Data
@@ -20,5 +21,6 @@ public class ReadingSessionSimpleDto {
     private List<SelectedCardDto> selectedCards;
     private String fullName;                  // Họ tên (bắt buộc nếu chưa login)
     private Date birthDate;
+    private User reader;
     private Instant matchedAt;
 }

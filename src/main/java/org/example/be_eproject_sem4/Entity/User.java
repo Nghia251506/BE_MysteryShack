@@ -57,7 +57,7 @@ public class User {
     // Dành riêng cho Reader
     @Column(name = "elo_score", nullable = false)
     private int eloScore = 1000;
-    @Column(name = "qr_code", columnDefinition = "TEXT")
+    @Column(name = "qr_code", columnDefinition = "LONGTEXT")
     private String QRCode;
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
