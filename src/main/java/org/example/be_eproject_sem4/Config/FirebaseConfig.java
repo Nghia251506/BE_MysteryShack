@@ -16,22 +16,30 @@ import com.google.firebase.FirebaseOptions;
 @Configuration
 public class FirebaseConfig {
 
-    @Value("${JSON_FCM}") // Đảm bảo biến này khớp với file env/properties
-    private String fcmJsonBase64;
+    // Lấy trực tiếp nội dung JSON từ biến môi trường
+    @org.springframework.beans.factory.annotation.Value("${JSON_FCM:}") 
+    private String fcmJson;
 
     @Bean
     public FirebaseApp initializeFirebase() throws IOException {
-        // Đọc trực tiếp từ thư mục resources
-        ClassPathResource resource = new ClassPathResource("firebase-service-account.json");
+        FirebaseOptions options;
 
-        if (!resource.exists()) {
-            throw new IllegalStateException(
-                    "LỖI: Không tìm thấy file firebase-service-account.json trong folder resources!");
+        // Ưu tiên đọc từ biến môi trường (Dùng cho Cloud)
+        if (fcmJson != null && !fcmJson.isEmpty()) {
+            options = FirebaseOptions.builder()
+                    .setCredentials(GoogleCredentials.fromStream(new ByteArrayInputStream(fcmJson.getBytes())))
+                    .build();
+        } 
+        // Nếu không có biến môi trường thì tìm file vật lý (Dùng cho Local)
+        else {
+            ClassPathResource resource = new ClassPathResource("firebase-service-account.json");
+            if (!resource.exists()) {
+                throw new IllegalStateException("LỖI: Không tìm thấy cả biến JSON_FCM lẫn file vật lý!");
+            }
+            options = FirebaseOptions.builder()
+                    .setCredentials(GoogleCredentials.fromStream(resource.getInputStream()))
+                    .build();
         }
-
-        FirebaseOptions options = FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(resource.getInputStream()))
-                .build();
 
         if (FirebaseApp.getApps().isEmpty()) {
             return FirebaseApp.initializeApp(options);
