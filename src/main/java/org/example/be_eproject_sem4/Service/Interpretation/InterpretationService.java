@@ -94,20 +94,11 @@ public class InterpretationService {
         // ==================================================================
 
         // A. Thông báo cho Reader (Xác nhận thành công)
-        sendNotificationToUser(
-                session.getReader(),
-                "Nộp bài thành công!",
-                "Luận giải của bạn đã được gửi đến khách hàng. Đang chờ thanh toán.",
-                String.valueOf(sessionId),
-                "INTERPRETATION_SUBMITTED");
-
-        // B. Thông báo cho Khách hàng (Báo có kết quả)
-        sendNotificationToUser(
-                session.getCustomer(),
-                "Đã có kết quả luận giải!",
-                "Reader " + session.getReader().getFullName() + " đã gửi luận giải cho bạn. Hãy vào xem ngay!",
-                String.valueOf(sessionId),
-                "INTERPRETATION_RECEIVED");
+        notificationManager.notifyReadingFinished(
+            session.getCustomer().getId(), 
+            sessionId, 
+            session.getReader().getFullName()
+        );
 
         return interpretationMapper.toDto(savedForm);
     }
@@ -162,7 +153,10 @@ public class InterpretationService {
         formRepository.save(form);
         sessionRepository.save(session);
         Long customerId = session.getCustomer().getId();
-        notificationManager.notifyCustomerPaymentConfirmed(customerId, sessionId);
+        notificationManager.notifyCustomerPaymentConfirmed(
+            session.getCustomer().getId(), 
+            sessionId
+        );
     }
 
     /**
@@ -192,8 +186,10 @@ public class InterpretationService {
         ReadingSession session = form.getRequestId();
         if (session.getReader() != null) {
             notificationManager.notifyReaderPaymentSent(
-                    session.getReader().getId(),
-                    sessionId);
+                session.getReader().getId(), 
+                sessionId, 
+                session.getCustomer().getFullName() // Gửi thêm tên để Reader biết ai trả
+            );
         }
     }
 }
