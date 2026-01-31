@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.example.be_eproject_sem4.Entity.FcmToken;
+import org.example.be_eproject_sem4.Entity.ReadingSession;
 import org.example.be_eproject_sem4.Repository.FcmTokenRepository;
 import org.example.be_eproject_sem4.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,19 +22,36 @@ public class NotificationManager {
 
     // --- 1. READER: Nhận yêu cầu mới (Popup Grab) ---
     public void notifyReaderNewRequest(Long readerId, Long sessionId, String customerName) {
+
         userRepository.findById(readerId).ifPresent(user -> {
-            if (user.getRole().toString().equals("READER") && user.isActive()) {
-                Map<String, String> data = Map.of("type", "NEW_MATCH_REQUEST",
+
+            boolean isActive = user.isActive();
+
+            if (user.getRole().toString().equals("READER") && isActive) {
+
+                Map<String, String> data = Map.of(
+
+                        "type", "NEW_MATCH_REQUEST",
+
                         "sessionId", sessionId.toString(),
-                        "customerName", customerName,
+
+                        "customerName", user.getFullName(),
                         "message", "Bạn có yêu cầu trải bài mới từ khách hàng " + customerName,
+
                         "timeout", "30",
-                        "action", "ACCEPT_REJECT",
+
                         "sound", "notification.mp3");
 
                 sendDataToUser(readerId, data);
+
+            } else {
+
+                System.out.println("DEBUG: User " + readerId + " không phải Reader hoặc đang bận, không bắn FCM.");
+
             }
+
         });
+
     }
 
     // --- 2. CUSTOMER: Hệ thống đang tìm Reader (Sau khi createSession) ---
@@ -103,19 +121,33 @@ public class NotificationManager {
 
     // --- 6. READER: Khách báo đã chuyển tiền ---
     public void notifyReaderPaymentSent(Long readerId, Long sessionId, String customerName) {
+
         userRepository.findById(readerId).ifPresent(user -> {
+
             if (user.getRole().toString().equals("READER")) {
-                Map<String, String> data = new HashMap<>();
-                data.put("type", "PAYMENT_SENT");
-                data.put("sessionId", sessionId.toString());
-                // SỬA: Phải là customerName truyền vào
-                data.put("message", "Khách hàng " + customerName + " đã xác nhận chuyển tiền. Vui lòng kiểm tra và mở khóa luận giải.");
-                data.put("action", "VIEW_SESSION");
-                data.put("sound", "notification.mp3");
+
+                Map<String, String> data = Map.of(
+
+                        "type", "PAYMENT_SENT",
+
+                        "sessionId", sessionId.toString(),
+
+                        "message", "Khách hàng " + user.getFullName() + " đã xác nhận chuyển tiền cho bạn. Vui lòng kiểm tra và mở khóa luận giải cho khách hàng.",
+
+                        "action", "VIEW_SESSION",
+
+                        "sound", "notification.mp3");
 
                 sendDataToUser(readerId, data);
+
+            }else{
+
+                System.out.println("DEBUG: User " + readerId + " không phải Reader, không bắn FCM.");
+
             }
+
         });
+
     }
 
     // --- 7. CUSTOMER: Reader xác nhận đã nhận tiền (Popup Unlock hoàn toàn) ---
