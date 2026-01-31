@@ -183,12 +183,11 @@ public class InterpretationService {
 
         // 4. BẮN THÔNG BÁO CHO READER
         // Lấy thông tin Reader từ Session
-        ReadingSession session = form.getRequestId();
-        if (session.getReader() != null) {
+        if (form.getRequestId().getReader() != null) {
             notificationManager.notifyReaderPaymentSent(
-                session.getReader().getId(), 
+                    form.getRequestId().getReader().getId(),
                 sessionId, 
-                session.getCustomer().getFullName() // Gửi thêm tên để Reader biết ai trả
+                form.getRequestId().getFullName() // Gửi thêm tên để Reader biết ai trả
             );
         }
     }
