@@ -23,7 +23,7 @@ public class NotificationManager {
             double customerRating) {
         userRepository.findById(readerId).ifPresent(user -> {
             boolean isActive = user.isActive();
-            if ("READER".equals(user.getRole()) && isActive) {
+            if (user.getRole().toString().equals("READER") && isActive) {
                 Map<String, String> data = Map.of(
                         "type", "NEW_MATCH_REQUEST",
                         "sessionId", sessionId.toString(),
@@ -42,7 +42,7 @@ public class NotificationManager {
     // --- 2. CUSTOMER: Hệ thống đang tìm Reader (Sau khi createSession) ---
     public void notifyCustomerSearching(Long customerId) {
         userRepository.findById(customerId).ifPresent(user -> {
-            if ("CUSTOMER".equals(user.getRole())) {
+            if (user.getRole().toString().equals("CUSTOMER")) {
                 Map<String, String> data = Map.of(
                         "type", "SEARCHING_READER",
                         "message", "Yêu cầu đã gửi. Hệ thống đang tìm Reader phù hợp cho bạn...",
@@ -57,7 +57,7 @@ public class NotificationManager {
     // --- 3. CUSTOMER: Reader từ chối (Thông báo chờ người khác) ---
     public void notifyCustomerReaderRejected(Long customerId, String readerName) {
         userRepository.findById(customerId).ifPresent(user -> {
-            if ("CUSTOMER".equals(user.getRole())) {
+            if (user.getRole().toString().equals("CUSTOMER")) {
                 Map<String, String> data = Map.of(
                         "type", "READER_REJECTED",
                         "readerName", readerName,
@@ -73,7 +73,7 @@ public class NotificationManager {
     // --- 4. CUSTOMER: Reader đã Accept (Bắt đầu xem bài) ---
     public void notifyCustomerAccepted(Long customerId, String readerName) {
         userRepository.findById(customerId).ifPresent(user -> {
-            if ("CUSTOMER".equals(user.getRole())) {
+            if (user.getRole().toString().equals("CUSTOMER")) {
                 Map<String, String> data = Map.of(
                         "type", "READER_ACCEPTED",
                         "readerName", readerName,
@@ -90,7 +90,7 @@ public class NotificationManager {
     // --- 5. CUSTOMER: Reader đã submit luận giải (Popup mở bài) ---
     public void notifyReadingFinished(Long customerId, Long sessionId, String readerName) {
         userRepository.findById(customerId).ifPresent(user -> {
-            if ("CUSTOMER".equals(user.getRole())) {
+            if (user.getRole().toString().equals("CUSTOMER")) {
                 Map<String, String> data = Map.of(
                         "type", "READING_FINISHED",
                         "sessionId", sessionId.toString(),
@@ -107,7 +107,7 @@ public class NotificationManager {
     // --- 6. READER: Khách báo đã chuyển tiền ---
     public void notifyReaderPaymentSent(Long readerId, Long sessionId, String customerName) {
         userRepository.findById(readerId).ifPresent(user -> {
-            if ("READER".equals(user.getRole())) {
+            if (user.getRole().toString().equals("READER")) {
                 Map<String, String> data = Map.of(
                         "type", "PAYMENT_SENT",
                         "sessionId", sessionId.toString(),
@@ -124,7 +124,7 @@ public class NotificationManager {
     // --- 7. CUSTOMER: Reader xác nhận đã nhận tiền (Popup Unlock hoàn toàn) ---
     public void notifyCustomerPaymentConfirmed(Long customerId, Long sessionId) {
         userRepository.findById(customerId).ifPresent(user -> {
-            if ("CUSTOMER".equals(user.getRole())) {
+            if (user.getRole().toString().equals("CUSTOMER")) {
                 Map<String, String> data = Map.of(
                         "type", "PAYMENT_CONFIRMED",
                         "sessionId", sessionId.toString(),
