@@ -23,14 +23,13 @@ public class NotificationManager {
     public void notifyReaderNewRequest(Long readerId, Long sessionId, String customerName) {
         userRepository.findById(readerId).ifPresent(user -> {
             if (user.getRole().toString().equals("READER") && user.isActive()) {
-                Map<String, String> data = new HashMap<>(); // Dùng HashMap cho lành
-                data.put("type", "NEW_MATCH_REQUEST");
-                data.put("sessionId", sessionId.toString());
-                data.put("customerName", customerName); // Dùng tham số truyền vào, không dùng user.getFullName()
-                data.put("message", "Bạn có yêu cầu trải bài mới từ khách hàng " + customerName);
-                data.put("timeout", "30");
-                data.put("action", "ACCEPT_REJECT"); // Thêm action để FE biết đường mở Modal nút bấm
-                data.put("sound", "notification.mp3");
+                Map<String, String> data = Map.of("type", "NEW_MATCH_REQUEST",
+                        "sessionId", sessionId.toString(),
+                        "customerName", customerName,
+                        "message", "Bạn có yêu cầu trải bài mới từ khách hàng " + customerName,
+                        "timeout", "30",
+                        "action", "ACCEPT_REJECT",
+                        "sound", "notification.mp3");
 
                 sendDataToUser(readerId, data);
             }
