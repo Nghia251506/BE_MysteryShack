@@ -26,7 +26,7 @@ public class NotificationManager {
                 Map<String, String> data = Map.of(
                         "type", "NEW_MATCH_REQUEST",
                         "sessionId", sessionId.toString(),
-                        "customerName", customerName,
+                        "customerName", user.getFullName(),
                         "timeout", "30",
                         "sound", "notification.mp3");
                 sendDataToUser(readerId, data);
@@ -57,8 +57,8 @@ public class NotificationManager {
             if (user.getRole().toString().equals("CUSTOMER")) {
                 Map<String, String> data = Map.of(
                         "type", "READER_REJECTED",
-                        "readerName", readerName,
-                        "message", "Rất tiếc! Reader " + readerName + " đã từ chối yêu cầu của bạn. Hệ thống sẽ tiếp tục tìm Reader khác...",
+                        "readerName", user.getFullName(),
+                        "message", "Rất tiếc! Reader " + user.getFullName() + " đã từ chối yêu cầu của bạn. Hệ thống sẽ tiếp tục tìm Reader khác...",
                         "sound", "notification.mp3");
                 sendDataToUser(customerId, data);
             }else{
