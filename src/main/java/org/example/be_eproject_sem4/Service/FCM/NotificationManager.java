@@ -108,7 +108,7 @@ public class NotificationManager {
                 Map<String, String> data = Map.of(
                         "type", "PAYMENT_SENT",
                         "sessionId", sessionId.toString(),
-                        "message", "Khách hàng " + customerName + " đã xác nhận chuyển tiền cho bạn. Vui lòng kiểm tra và mở khóa luận giải cho khách hàng.",
+                        "message", "Khách hàng " + user.getFullName() + " đã xác nhận chuyển tiền cho bạn. Vui lòng kiểm tra và mở khóa luận giải cho khách hàng.",
                         "action", "VIEW_SESSION",
                         "sound", "notification.mp3");
                 sendDataToUser(readerId, data);
