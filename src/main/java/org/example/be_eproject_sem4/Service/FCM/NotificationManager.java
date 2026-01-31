@@ -1,5 +1,6 @@
 package org.example.be_eproject_sem4.Service.FCM;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,17 +22,17 @@ public class NotificationManager {
     // --- 1. READER: Nhận yêu cầu mới (Popup Grab) ---
     public void notifyReaderNewRequest(Long readerId, Long sessionId, String customerName) {
         userRepository.findById(readerId).ifPresent(user -> {
-            boolean isActive = user.isActive();
-            if (user.getRole().toString().equals("READER") && isActive) {
-                Map<String, String> data = Map.of(
-                        "type", "NEW_MATCH_REQUEST",
-                        "sessionId", sessionId.toString(),
-                        "customerName", user.getFullName(),
-                        "timeout", "30",
-                        "sound", "notification.mp3");
+            if (user.getRole().toString().equals("READER") && user.isActive()) {
+                Map<String, String> data = new HashMap<>(); // Dùng HashMap cho lành
+                data.put("type", "NEW_MATCH_REQUEST");
+                data.put("sessionId", sessionId.toString());
+                data.put("customerName", customerName); // Dùng tham số truyền vào, không dùng user.getFullName()
+                data.put("message", "Bạn có yêu cầu trải bài mới từ khách hàng " + customerName);
+                data.put("timeout", "30");
+                data.put("action", "ACCEPT_REJECT"); // Thêm action để FE biết đường mở Modal nút bấm
+                data.put("sound", "notification.mp3");
+
                 sendDataToUser(readerId, data);
-            } else {
-                System.out.println("DEBUG: User " + readerId + " không phải Reader hoặc đang bận, không bắn FCM.");
             }
         });
     }
@@ -105,15 +106,15 @@ public class NotificationManager {
     public void notifyReaderPaymentSent(Long readerId, Long sessionId, String customerName) {
         userRepository.findById(readerId).ifPresent(user -> {
             if (user.getRole().toString().equals("READER")) {
-                Map<String, String> data = Map.of(
-                        "type", "PAYMENT_SENT",
-                        "sessionId", sessionId.toString(),
-                        "message", "Khách hàng " + user.getFullName() + " đã xác nhận chuyển tiền cho bạn. Vui lòng kiểm tra và mở khóa luận giải cho khách hàng.",
-                        "action", "VIEW_SESSION",
-                        "sound", "notification.mp3");
+                Map<String, String> data = new HashMap<>();
+                data.put("type", "PAYMENT_SENT");
+                data.put("sessionId", sessionId.toString());
+                // SỬA: Phải là customerName truyền vào
+                data.put("message", "Khách hàng " + customerName + " đã xác nhận chuyển tiền. Vui lòng kiểm tra và mở khóa luận giải.");
+                data.put("action", "VIEW_SESSION");
+                data.put("sound", "notification.mp3");
+
                 sendDataToUser(readerId, data);
-            }else{
-                System.out.println("DEBUG: User " + readerId + " không phải Reader, không bắn FCM.");
             }
         });
     }
