@@ -284,7 +284,7 @@ public class ReadingSessionService {
             System.out.println(">>> [MATCH SUCCESS] Assigned Reader: " + targetReader.getFullName());
 
             // --- GỬI THÔNG BÁO CHO READER ---
-            notificationManager.notifyReaderNewRequest(session.getReader().getId(), session.getId(),session.getFullName(),session.);
+            notificationManager.notifyReaderNewRequest(session.getReader().getId(), session.getId(),session.getFullName());
         } else {
             session.setStatus("PENDING");
             sessionRepository.save(session);
