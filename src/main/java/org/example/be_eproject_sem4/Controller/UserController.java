@@ -1,5 +1,6 @@
 package org.example.be_eproject_sem4.Controller;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import org.example.be_eproject_sem4.Dto.Auth.UpdateProfileRequest;
@@ -7,6 +8,8 @@ import org.example.be_eproject_sem4.Dto.Auth.UserDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Service.User.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -71,5 +74,23 @@ public class UserController {
             @RequestBody UpdateProfileRequest request) {
         User updated = userService.updateFullnameAndBirthdate(id, request.getFullName(), request.getBirthDate());
         return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<User>> searchUsers(
+            @RequestParam User.Role role,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) Integer minElo,
+            @RequestParam(required = false) Integer maxElo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+
+        return ResponseEntity.ok(userService.getAdvancedSearch(
+                role, keyword, isActive, startDate, endDate, minElo, maxElo, page, size, sortBy, direction));
     }
 }

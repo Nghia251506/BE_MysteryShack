@@ -2,17 +2,20 @@ package org.example.be_eproject_sem4.Repository;
 
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Entity.User.Role;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.awt.print.Pageable;
 import java.io.Reader;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long>{
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
     @Query("SELECT u FROM User u " +
             "WHERE u.username = :username")
     Optional<User> findByUsername(String username);
@@ -24,5 +27,5 @@ public interface UserRepository extends JpaRepository<User, Long>{
     List<User> findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role role, Long userId);
     // Optional<Reader> findByUserId(Long userId);
 
-    
+    Page<User> findByRole(User.Role role, Pageable pageable);
 }
