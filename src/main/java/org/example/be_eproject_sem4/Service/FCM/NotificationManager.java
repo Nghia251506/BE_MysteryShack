@@ -19,8 +19,7 @@ public class NotificationManager {
     private UserRepository userRepository;
 
     // --- 1. READER: Nhận yêu cầu mới (Popup Grab) ---
-    public void notifyReaderNewRequest(Long readerId, Long sessionId, String customerName, String customerAvatar,
-            double customerRating) {
+    public void notifyReaderNewRequest(Long readerId, Long sessionId, String customerName) {
         userRepository.findById(readerId).ifPresent(user -> {
             boolean isActive = user.isActive();
             if (user.getRole().toString().equals("READER") && isActive) {
@@ -28,8 +27,6 @@ public class NotificationManager {
                         "type", "NEW_MATCH_REQUEST",
                         "sessionId", sessionId.toString(),
                         "customerName", customerName,
-                        "customerRating", String.valueOf(customerRating),
-                        "customerAvatar", customerAvatar != null ? customerAvatar : "",
                         "timeout", "30",
                         "sound", "notification.mp3");
                 sendDataToUser(readerId, data);
