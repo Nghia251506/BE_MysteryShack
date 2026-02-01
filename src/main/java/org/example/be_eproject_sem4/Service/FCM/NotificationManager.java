@@ -181,6 +181,27 @@ public class NotificationManager {
         });
     }
 
+    public void notifyReaderNewRating(Long readerId, Integer ratingValue, String comment, String customerName) {
+        userRepository.findById(readerId).ifPresent(user -> {
+            // Kiểm tra xem User có đúng là Reader không
+            if (user.getRole().toString().equals("READER")) {
+
+                // Tạo Map chứa dữ liệu (Lưu ý: Map.of chỉ nhận String, nên phải toString các số)
+                Map<String, String> data = new HashMap<>();
+                data.put("type", "NEW_RATING");
+                data.put("ratingValue", String.valueOf(ratingValue));
+                data.put("comment", comment != null ? comment : "Khách hàng không để lại lời nhắn.");
+                data.put("customerName", customerName != null ? customerName : "Ẩn danh");
+                data.put("message", "Bạn vừa nhận được đánh giá " + ratingValue + " sao từ " + (customerName != null ? customerName : "khách hàng") + "!");
+                data.put("sound", "success_ding.mp3");
+
+                sendDataToUser(readerId, data);
+            } else {
+                System.out.println("DEBUG: User " + readerId + " không phải Reader, không bắn FCM đánh giá.");
+            }
+        });
+    }
+
     // Hàm helper để gửi Data Message tới tất cả token của 1 User
     private void sendDataToUser(Long userId, Map<String, String> data) {
         List<FcmToken> tokens = tokenRepository.findByUserId(userId);

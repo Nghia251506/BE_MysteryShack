@@ -12,6 +12,7 @@ import org.example.be_eproject_sem4.Mapper.*;
 import org.example.be_eproject_sem4.Repository.*;
 import org.example.be_eproject_sem4.Security.JwtTokenProvider;
 import org.example.be_eproject_sem4.Service.EloService;
+import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ public class RatingService {
     private final RatingMapper ratingMapper;
     private final ReaderStatsMapper statsMapper;
     private final JwtTokenProvider jwtProvider;
+    private final NotificationManager notificationManager;
 
     public Long getCustomerIdFromRequest(HttpServletRequest request) {
         String token = null;
@@ -86,6 +88,24 @@ public class RatingService {
 
         // E. Cập nhật Elo
         updateReaderElo(session, dto.getRatingValue(), stats);
+
+        // --- F. BẮN THÔNG BÁO FCM CHO READER ---
+        try {
+            // Lấy tên khách hàng dựa trên lựa chọn ẩn danh
+            String displayName = (dto.getIsAnonymous() != null && dto.getIsAnonymous())
+                    ? "Ẩn danh"
+                    : customer.getFullName();
+
+            notificationManager.notifyReaderNewRating(
+                    session.getReader().getId(),
+                    dto.getRatingValue(),
+                    dto.getComment(),
+                    displayName
+            );
+        } catch (Exception e) {
+            // Log lỗi nhưng không rollback transaction vì đây là phụ trợ (optional)
+            System.err.println("Lỗi bắn FCM cho Reader: " + e.getMessage());
+        }
 
         return ratingMapper.toResponseDTO(savedRating);
     }
