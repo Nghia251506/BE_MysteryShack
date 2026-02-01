@@ -55,7 +55,7 @@ public class RatingService {
     // --- 1. LOGIC LÕI: TẠO RATING (4-TRONG-1) ---
     @Transactional
     public RatingResponseDTO createRating(CreateRatingDTO dto, Long customerId) {
-        // A. Validate Session
+        // 1. Tìm và Validate Session
         ReadingSession session = sessionRepository.findById(dto.getRequestId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiên làm việc ID: " + dto.getRequestId()));
 
@@ -63,22 +63,23 @@ public class RatingService {
             throw new RuntimeException("Phiên này đã được đánh giá rồi!");
         }
 
-        // B. Lưu Rating
+        // 2. Lưu Rating vào Database
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Customer với ID: " + customerId));
 
         Rating rating = ratingMapper.toEntity(dto, session, customer);
         Rating savedRating = ratingRepository.save(rating);
 
-        // C. Update Session
+        // 3. Đánh dấu Session đã được đánh giá
         session.setIsRated(true);
         sessionRepository.save(session);
 
-        // D. Update Stats
-        ReaderStats stats = statsRepository.findByReaderId(session.getReader().getId())
+        // 4. Cập nhật Stats cho Reader
+        User reader = session.getReader();
+        ReaderStats stats = statsRepository.findByReaderId(reader.getId())
                 .orElseGet(() -> {
                     ReaderStats newStats = new ReaderStats();
-                    newStats.setReader(session.getReader());
+                    newStats.setReader(reader);
                     newStats.setAverageRatingMonth(0.0);
                     newStats.setTotalReviewsMonth(0);
                     return statsRepository.save(newStats);
@@ -86,25 +87,52 @@ public class RatingService {
         stats.updateRating(dto.getRatingValue());
         statsRepository.save(stats);
 
-        // E. Cập nhật Elo
-        updateReaderElo(session, dto.getRatingValue(), stats);
+        // ==================================================================
+        // 5. LOGIC TÍNH LẠI ELO CHÍNH THỨC (Gộp trực tiếp tại đây)
+        // ==================================================================
 
-        // --- F. BẮN THÔNG BÁO FCM CHO READER ---
+        // Bốc lại mốc Elo gốc lúc Accept đơn
+        // Nếu rủi ro dữ liệu cũ chưa có eloBeforeAction thì lấy elo hiện tại làm mốc
+        double baseElo = (reader.getEloBeforeAction() != null) ? reader.getEloBeforeAction() : reader.getEloScore();
+
+        // Tính thời gian phản hồi (Response Time) từ lúc Accept đến lúc Submit bài luận
+        long responseTimeMinutes = 0;
+        if (session.getAcceptedAt() != null && session.getSubmitedAt() != null) {
+            responseTimeMinutes = java.time.Duration.between(session.getAcceptedAt(), session.getSubmitedAt()).toMinutes();
+        }
+
+        // Gọi EloService để tính con số cuối cùng (có kèm sao thật từ khách)
+        EloCalculationRequest eloRequest = new EloCalculationRequest();
+        eloRequest.setCurrentElo(baseElo);
+        eloRequest.setUserReputation(reader.getReputation() != null ? reader.getReputation() : 1000.0);
+        eloRequest.setResponseTime((int) responseTimeMinutes);
+        eloRequest.setCompleted(true);
+        eloRequest.setStars(dto.getRatingValue()); // Sao thật từ Rating DTO
+        eloRequest.setPositiveRate(1.0);
+        eloRequest.setKFactor(32);
+
+        EloCalculationResponse eloResponse = eloService.calculateNewElo(eloRequest);
+
+        // Ghi đè Elo mới nhất vào User (Xóa bỏ con số tạm tính lúc nộp bài)
+        reader.setEloScore(eloResponse.getNewElo());
+        userRepository.save(reader);
+
+        // ==================================================================
+
+        // 6. Bắn thông báo FCM (Giữ nguyên)
         try {
-            // Lấy tên khách hàng dựa trên lựa chọn ẩn danh
             String displayName = (dto.getIsAnonymous() != null && dto.getIsAnonymous())
                     ? "Ẩn danh"
                     : customer.getFullName();
 
             notificationManager.notifyReaderNewRating(
-                    session.getReader().getId(),
+                    reader.getId(),
                     dto.getRatingValue(),
                     dto.getComment(),
                     displayName
             );
         } catch (Exception e) {
-            // Log lỗi nhưng không rollback transaction vì đây là phụ trợ (optional)
-            System.err.println("Lỗi bắn FCM cho Reader: " + e.getMessage());
+            System.err.println("Lỗi bắn FCM: " + e.getMessage());
         }
 
         return ratingMapper.toResponseDTO(savedRating);

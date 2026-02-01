@@ -67,7 +67,7 @@ public class NotificationManager {
         });
     }
 
-    // 3. CUSTOMER: Reader TỪ CHỐI (Hàm ông cần đây!)
+    // 3. CUSTOMER: Reader TỪ CHỐI
     public void notifyCustomerReaderRejected(Long customerId, String readerName) {
         userRepository.findById(customerId).ifPresent(user -> {
             String rName = (readerName != null) ? readerName : getSenderNameFromToken();

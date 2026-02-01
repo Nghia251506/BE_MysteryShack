@@ -63,7 +63,8 @@ public class User {
     private boolean isActive;
     @Column(name = "is_blocked")
     private Boolean isBlocked = false;
-
+    @Column(name = "before_elo",columnDefinition = "double default 1000")
+    private Double eloBeforeAction;
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -77,8 +78,8 @@ public class User {
         CUSTOMER, READER, ADMIN
     }
 
-    @Column(name = "reputation")
-    private Double reputation = 1.0;
+    @Column(name = "reputation",columnDefinition = "double default 0")
+    private Double reputation;
 
     // Helper method để check role (tùy chọn)
     public boolean isReader() {

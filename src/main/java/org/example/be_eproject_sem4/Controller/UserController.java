@@ -8,6 +8,7 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.be_eproject_sem4.Dto.Auth.UpdateProfileRequest;
 import org.example.be_eproject_sem4.Dto.Auth.UserDto;
+import org.example.be_eproject_sem4.Dto.Auth.UserUpdateDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Security.JwtTokenProvider;
 import org.example.be_eproject_sem4.Service.Rating.RatingService;
@@ -83,6 +84,12 @@ public class UserController {
             @PathVariable Long id,
             @RequestBody UpdateProfileRequest request) {
         User updated = userService.updateFullnameAndBirthdate(id, request.getFullName(), request.getBirthDate());
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<User>  updateUserProfile(@PathVariable Long id, @RequestBody UserUpdateDto dto){
+        User updated = userService.updateProfile(id,dto);
         return ResponseEntity.ok(updated);
     }
 }

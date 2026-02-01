@@ -24,7 +24,14 @@ public class EloService {
         // 3. Quy đổi Hài lòng (H)
         double s = request.getStars();
         double r = request.getPositiveRate();
-        double h = ((s / 5.0) * 0.7) + (r * 0.3);
+        double h ;
+        if (s == 0) {
+            // Nếu khách chưa đánh giá, cho Reader hưởng mức Hài lòng mặc định (ví dụ 0.8 ~ 4 sao)
+            // Để họ vẫn được tăng Elo nhờ tốc độ (P) và hoàn thành đơn (C)
+            h = 0.8;
+        } else {
+            h = ((s / 5.0) * 0.7) + (r * 0.3);
+        }
 
         // 4. Tính Điểm thực tế (A) - Trọng số: P(30%), C(30%), H(40%)
         double a = (0.3 * p) + (0.3 * c) + (0.4 * h);

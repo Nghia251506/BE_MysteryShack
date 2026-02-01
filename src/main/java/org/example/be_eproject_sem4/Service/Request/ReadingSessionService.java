@@ -155,6 +155,7 @@ public class ReadingSessionService {
         // 3. Cập nhật Session và Lịch sử
         session.setStatus("ACCEPTED");
         session.setAcceptedAt(Instant.now());
+        session.getReader().setEloBeforeAction(session.getReader().getEloScore());
         sessionRepository.save(session);
         updateHistoryStatus(sessionId, ReadingStatus.ACCEPTED, currentReader);
 
@@ -303,9 +304,11 @@ public class ReadingSessionService {
 
             // --- GỬI THÔNG BÁO CHO READER ---
             notificationManager.notifyReaderNewRequest(session.getReader().getId(), session.getId(),session.getFullName());
+            notificationManager.notifyReaderMatched(session.getCustomer().getId(),session.getReader().getFullName());
         } else {
             session.setStatus("PENDING");
             sessionRepository.save(session);
+            notificationManager.notifyCustomerSearching(session.getCustomer().getId());
             System.out.println(">>> [MATCH FAILED] Không có Reader khả dụng.");
         }
     }

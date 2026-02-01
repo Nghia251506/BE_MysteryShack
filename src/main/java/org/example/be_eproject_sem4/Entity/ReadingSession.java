@@ -57,6 +57,7 @@ public class ReadingSession {
     private LocalDate birthDate;
     @Column(name = "is_rated", nullable = false, columnDefinition = "boolean default false")
     private Boolean isRated = false;
+    private Instant submitedAt;
 
     @CreationTimestamp
     private Instant createdAt;
