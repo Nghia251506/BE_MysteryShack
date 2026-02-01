@@ -1,15 +1,16 @@
 package org.example.be_eproject_sem4.Service.FCM;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.example.be_eproject_sem4.Entity.FcmToken;
+import org.example.be_eproject_sem4.Repository.FcmTokenRepository;
+import org.example.be_eproject_sem4.Repository.UserRepository;
+import org.example.be_eproject_sem4.Security.JwtTokenProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.example.be_eproject_sem4.Entity.FcmToken;
-import org.example.be_eproject_sem4.Entity.ReadingSession;
-import org.example.be_eproject_sem4.Repository.FcmTokenRepository;
-import org.example.be_eproject_sem4.Repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 @Service
 public class NotificationManager {
@@ -19,190 +20,113 @@ public class NotificationManager {
     private FcmTokenRepository tokenRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private JwtTokenProvider jwtService; // Tiêm JwtService vào
+    @Autowired
+    private HttpServletRequest request; // Để bốc Token từ header
 
-    // --- 1. READER: Nhận yêu cầu mới (Popup Grab) ---
+    // Hàm Helper lấy tên thằng đang thực hiện (Người gửi) từ Token
+    private String getSenderNameFromToken() {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return jwtService.getFullnameFromToken(token);
+        }
+        return "Người dùng";
+    }
+
+    // 1. READER: Nhận yêu cầu mới (Tên khách bốc từ Token khách)
     public void notifyReaderNewRequest(Long readerId, Long sessionId, String customerName) {
-
         userRepository.findById(readerId).ifPresent(user -> {
+            if (user.getRole().toString().equals("READER") && user.isActive()) {
+                // Ưu tiên customerName truyền vào, nếu ko có thì bốc từ Token
+                String finalCustomerName = (customerName != null) ? customerName : getSenderNameFromToken();
 
-            boolean isActive = user.isActive();
-
-            if (user.getRole().toString().equals("READER") && isActive) {
-
-                Map<String, String> data = Map.of(
-
-                        "type", "NEW_MATCH_REQUEST",
-
-                        "sessionId", sessionId.toString(),
-
-                        "customerName", customerName,
-                        "message", "Bạn có yêu cầu trải bài mới từ khách hàng " + customerName,
-
-                        "timeout", "30",
-
-                        "sound", "notification.mp3");
+                Map<String, String> data = new HashMap<>();
+                data.put("type", "NEW_MATCH_REQUEST");
+                data.put("sessionId", sessionId.toString());
+                data.put("customerName", finalCustomerName);
+                data.put("message", "Bạn có yêu cầu mới từ khách hàng " + finalCustomerName);
+                data.put("sound", "notification.mp3");
+                data.put("timeout", "30");
 
                 sendDataToUser(readerId, data);
-
-            } else {
-
-                System.out.println("DEBUG: User " + readerId + " không phải Reader hoặc đang bận, không bắn FCM.");
-
-            }
-
-        });
-
-    }
-
-    // --- 2. CUSTOMER: Hệ thống đang tìm Reader (Sau khi createSession) ---
-    public void notifyCustomerSearching(Long customerId) {
-        userRepository.findById(customerId).ifPresent(user -> {
-            if (user.getRole().toString().equals("CUSTOMER")) {
-                Map<String, String> data = Map.of(
-                        "type", "SEARCHING_READER",
-                        "message", "Yêu cầu đã gửi. Hệ thống đang tìm Reader phù hợp cho bạn...",
-                        "sound", "notification.mp3");
-                sendDataToUser(customerId, data);
-            }else{
-                System.out.println("DEBUG: User " + customerId + " không phải Customer, không bắn FCM.");
             }
         });
     }
 
-    // --- 3. CUSTOMER: Reader từ chối (Thông báo chờ người khác) ---
-    public void notifyCustomerReaderRejected(Long customerId, String readerName) {
-        userRepository.findById(customerId).ifPresent(user -> {
-            if (user.getRole().toString().equals("CUSTOMER")) {
-                Map<String, String> data = Map.of(
-                        "type", "READER_REJECTED",
-                        "readerName", user.getFullName(),
-                        "message", "Rất tiếc! Reader " + user.getFullName() + " đã từ chối yêu cầu của bạn. Hệ thống sẽ tiếp tục tìm Reader khác...",
-                        "sound", "notification.mp3");
-                sendDataToUser(customerId, data);
-            }else{
-                System.out.println("DEBUG: User " + customerId + " không phải Customer, không bắn FCM.");
-            }
-        });
-    }
-
-    // --- 4. CUSTOMER: Reader đã Accept (Bắt đầu xem bài) ---
+    // 2. CUSTOMER: Reader đã Accept (Tên Reader bốc từ Token Reader)
     public void notifyCustomerAccepted(Long customerId, String readerName) {
         userRepository.findById(customerId).ifPresent(user -> {
-            if (user.getRole().toString().equals("CUSTOMER")) {
-                Map<String, String> data = Map.of(
-                        "type", "READER_ACCEPTED",
-                        "readerName", readerName,
-                        "message", "Tuyệt vời! Reader " + readerName + " đã chấp nhận yêu cầu của bạn. Hãy vào trang chi tiết kết quả và chờ Reader " + readerName + " luận giải thôi nào!",
-                        "action", "START_READING",
-                        "sound", "notification.mp3");
-                sendDataToUser(customerId, data);
-            }else{
-                System.out.println("DEBUG: User " + customerId + " không phải Customer, không bắn FCM.");
-            }
+            String finalReaderName = (readerName != null) ? readerName : getSenderNameFromToken();
+
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "READER_ACCEPTED");
+            data.put("readerName", finalReaderName);
+            data.put("message", "Reader " + finalReaderName + " đã chấp nhận yêu cầu của bạn!");
+            data.put("sound", "notification.mp3");
+
+            sendDataToUser(customerId, data);
         });
     }
 
-    // --- 5. CUSTOMER: Reader đã submit luận giải (Popup mở bài) ---
-    public void notifyReadingFinished(Long customerId, Long sessionId, String readerName) {
-        userRepository.findById(customerId).ifPresent(user -> {
-            if (user.getRole().toString().equals("CUSTOMER")) {
-                Map<String, String> data = Map.of(
-                        "type", "READING_FINISHED",
-                        "sessionId", sessionId.toString(),
-                        "message", "Reader " + readerName + " đã hoàn thành luận giải cho bạn! Hãy vào trang chi tiết để xem kết quả và hoàn thành thủ tục thanh toán.",
-                        "action", "VIEW_READING",
-                        "sound", "notification.mp3");
-                sendDataToUser(customerId, data);
-            }else{
-                System.out.println("DEBUG: User " + customerId + " không phải Customer, không bắn FCM.");
-            }
-        });
-    }
-
-    // --- 6. READER: Khách báo đã chuyển tiền ---
+    // 3. READER: Khách báo đã thanh toán (Tên khách bốc từ Token khách)
     public void notifyReaderPaymentSent(Long readerId, Long sessionId, String customerName) {
-
         userRepository.findById(readerId).ifPresent(user -> {
+            String finalCustomerName = (customerName != null) ? customerName : getSenderNameFromToken();
 
-            if (user.getRole().toString().equals("READER")) {
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "PAYMENT_SENT");
+            data.put("sessionId", sessionId.toString());
+            data.put("customerName", finalCustomerName);
+            data.put("message", "Khách hàng " + finalCustomerName + " báo đã chuyển tiền.");
+            data.put("sound", "notification.mp3");
 
-                Map<String, String> data = Map.of(
-
-                        "type", "PAYMENT_SENT",
-
-                        "sessionId", sessionId.toString(),
-
-                        "message", "Khách hàng " + user.getFullName() + " đã xác nhận chuyển tiền cho bạn. Vui lòng kiểm tra và mở khóa luận giải cho khách hàng.",
-
-                        "action", "VIEW_SESSION",
-
-                        "sound", "notification.mp3");
-
-                sendDataToUser(readerId, data);
-
-            }else{
-
-                System.out.println("DEBUG: User " + readerId + " không phải Reader, không bắn FCM.");
-
-            }
-
-        });
-
-    }
-
-    // --- 7. CUSTOMER: Reader xác nhận đã nhận tiền (Popup Unlock hoàn toàn) ---
-    public void notifyCustomerPaymentConfirmed(Long customerId, Long sessionId) {
-        userRepository.findById(customerId).ifPresent(user -> {
-            if (user.getRole().toString().equals("CUSTOMER")) {
-                Map<String, String> data = Map.of(
-                        "type", "PAYMENT_CONFIRMED",
-                        "sessionId", sessionId.toString(),
-                        "message", "Reader đã xác nhận nhận được tiền từ bạn! Bây giờ bạn có thể xem toàn bộ luận giải.",
-                        "action", "VIEW_FULL_READING",
-                        "sound", "notification.mp3");
-                sendDataToUser(customerId, data);
-            }else{
-                System.out.println("DEBUG: User " + customerId + " không phải Customer, không bắn FCM.");
-            }
+            sendDataToUser(readerId, data);
         });
     }
 
-    public void notifyReaderMatched(Long customerId, String readerName) {
-        userRepository.findById(customerId).ifPresent(user -> {
-            if (user.getRole().toString().equals("CUSTOMER")) {
-                Map<String, String> data = Map.of(
-                        "type", "READER_MATCHED_SUCCESS",
-                        "readerName", readerName,
-                        "message", "Tuyệt vời! Hệ thống đã tìm thấy Reader " + readerName + " tương thích với năng lượng của bạn. Khám phá ngay nhé!",
-                        "sound", "success_ding.mp3"
-                );
-                sendDataToUser(customerId, data);
-            }
-        });
-    }
-
+    // 4. READER: Có đánh giá mới (Tên khách từ Token khách)
     public void notifyReaderNewRating(Long readerId, Integer ratingValue, String comment, String customerName) {
         userRepository.findById(readerId).ifPresent(user -> {
-            // Kiểm tra xem User có đúng là Reader không
-            if (user.getRole().toString().equals("READER")) {
+            String finalCustomerName = (customerName != null) ? customerName : getSenderNameFromToken();
 
-                // Tạo Map chứa dữ liệu (Lưu ý: Map.of chỉ nhận String, nên phải toString các số)
-                Map<String, String> data = new HashMap<>();
-                data.put("type", "NEW_RATING");
-                data.put("ratingValue", String.valueOf(ratingValue));
-                data.put("comment", comment != null ? comment : "Khách hàng không để lại lời nhắn.");
-                data.put("customerName", customerName != null ? customerName : "Ẩn danh");
-                data.put("message", "Bạn vừa nhận được đánh giá " + ratingValue + " sao từ " + (customerName != null ? customerName : "khách hàng") + "!");
-                data.put("sound", "success_ding.mp3");
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "NEW_RATING");
+            data.put("ratingValue", String.valueOf(ratingValue));
+            data.put("customerName", finalCustomerName);
+            data.put("comment", comment != null ? comment : "");
+            data.put("message", "Bạn nhận được " + ratingValue + " sao từ " + finalCustomerName);
 
-                sendDataToUser(readerId, data);
-            } else {
-                System.out.println("DEBUG: User " + readerId + " không phải Reader, không bắn FCM đánh giá.");
-            }
+            sendDataToUser(readerId, data);
         });
     }
 
-    // Hàm helper để gửi Data Message tới tất cả token của 1 User
+    // 5. CUSTOMER: Reader đã xong bài luận (Tên Reader từ Token Reader)
+    public void notifyReadingFinished(Long customerId, Long sessionId, String readerName) {
+        userRepository.findById(customerId).ifPresent(user -> {
+            String finalReaderName = (readerName != null) ? readerName : getSenderNameFromToken();
+
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "READING_FINISHED");
+            data.put("sessionId", sessionId.toString());
+            data.put("readerName", finalReaderName);
+            data.put("message", "Reader " + finalReaderName + " đã hoàn thành bài luận của bạn!");
+
+            sendDataToUser(customerId, data);
+        });
+    }
+
+    // --- Các hàm notify hệ thống không cần lấy tên người gửi từ Token ---
+    public void notifyCustomerSearching(Long customerId) {
+        userRepository.findById(customerId).ifPresent(user -> {
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "SEARCHING_READER");
+            data.put("message", "Hệ thống đang tìm Reader phù hợp...");
+            sendDataToUser(customerId, data);
+        });
+    }
+
     private void sendDataToUser(Long userId, Map<String, String> data) {
         List<FcmToken> tokens = tokenRepository.findByUserId(userId);
         if (!tokens.isEmpty()) {

@@ -34,6 +34,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(user.getUsername())
+                .claim("fullName", user.getFullName())
                 .claim("userId", user.getId())
                 .claim("role", "ROLE_" + user.getRole().name())
                 .issuedAt(Date.from(now))
@@ -75,14 +76,14 @@ public class JwtTokenProvider {
     }
 
     // ---- Lấy username từ token ----
-    public String getUsernameFromToken(String token) {
+    public String getFullnameFromToken(String token) {
         try {
             return Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload()
-                    .getSubject();
+                    .get("fullName", String.class);
         } catch (Exception e) {
             return null;
         }
