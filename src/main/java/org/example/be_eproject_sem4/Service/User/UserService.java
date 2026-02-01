@@ -2,6 +2,7 @@ package org.example.be_eproject_sem4.Service.User;
 
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Repository.UserRepository;
+import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,8 @@ import java.util.Random;
 public class UserService {
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private NotificationManager notificationManager;
 
     // Lấy ngẫu nhiên 1 trong những người giỏi nhất (Dùng cho khách vãng lai)
     public User getRandomTopReader() {
@@ -25,10 +28,55 @@ public class UserService {
 
     // Lấy ngẫu nhiên 1 người giỏi nhưng loại trừ ID cụ thể (Tránh hiện lại chính
     // mình)
-    public User getRandomTopReaderExcludingMe(Long currentUserId) {
-        List<User> topReaders = userRepository.findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role.READER,
-                currentUserId);
-        return pickRandom(topReaders);
+    public User findRandomReader(List<Long> excludedIds, Long currentCustomerId) {
+        // 1. Xử lý danh sách loại trừ để tránh lỗi SQL
+        List<Long> finalExcludes = (excludedIds == null || excludedIds.isEmpty())
+                ? List.of(-1L)
+                : excludedIds;
+
+        // 2. Lấy danh sách Reader khả dụng
+        List<User> readers = userRepository.findAvailableReadersForMatching(finalExcludes);
+        if (readers.isEmpty()) {
+            return null;
+        }
+
+        // 3. Thuật toán Weighted Random dựa trên Elo
+        double totalWeight = 0.0;
+        for (User r : readers) {
+            totalWeight += Math.pow(r.getEloScore() / 1000.0, 2);
+        }
+
+        double randomValue = new Random().nextDouble() * totalWeight;
+        double countWeight = 0.0;
+        User matchedReader = null;
+
+        for (User r : readers) {
+            countWeight += Math.pow(r.getEloScore() / 1000.0, 2);
+            if (countWeight >= randomValue) {
+                matchedReader = r;
+                break;
+            }
+        }
+
+        if (matchedReader == null) matchedReader = readers.get(0);
+
+        // 4. Bắn Notification "vỗ vai" Reader ngay tại Service
+        if (readers.isEmpty()) return null;
+
+        for (User r : readers) {
+            countWeight += Math.pow(r.getEloScore() / 1000.0, 2);
+            if (countWeight >= randomValue) {
+                matchedReader = r;
+                break;
+            }
+        }
+        // Backup nếu vòng lặp có vấn đề
+        if (matchedReader == null) matchedReader = readers.get(0);
+
+        // Bắn thông báo cho khách: "Đã tìm thấy người tương thích!"
+        notificationManager.notifyReaderMatched(currentCustomerId, matchedReader.getFullName());
+
+        return matchedReader;
     }
 
     // Hàm phụ để xáo trộn và lấy người đầu tiên

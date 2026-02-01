@@ -24,7 +24,7 @@ public class UserDto {
     private String role;
     private Date birthDate;
     private boolean isVerified;
-    private int eloScore;
+    private double eloScore;
     private String bio;
     private String profilePicture;
     private String qrCode;

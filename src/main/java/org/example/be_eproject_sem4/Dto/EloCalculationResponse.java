@@ -1,6 +1,6 @@
 package org.example.be_eproject_sem4.Dto;
 
-import lombok.Data;
+import lombok.*;
 
 @Data
 public class EloCalculationResponse {

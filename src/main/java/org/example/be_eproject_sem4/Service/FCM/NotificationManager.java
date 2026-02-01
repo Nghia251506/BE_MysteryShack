@@ -35,7 +35,7 @@ public class NotificationManager {
 
                         "sessionId", sessionId.toString(),
 
-                        "customerName", user.getFullName(),
+                        "customerName", customerName,
                         "message", "Bạn có yêu cầu trải bài mới từ khách hàng " + customerName,
 
                         "timeout", "30",
@@ -163,6 +163,20 @@ public class NotificationManager {
                 sendDataToUser(customerId, data);
             }else{
                 System.out.println("DEBUG: User " + customerId + " không phải Customer, không bắn FCM.");
+            }
+        });
+    }
+
+    public void notifyReaderMatched(Long customerId, String readerName) {
+        userRepository.findById(customerId).ifPresent(user -> {
+            if (user.getRole().toString().equals("CUSTOMER")) {
+                Map<String, String> data = Map.of(
+                        "type", "READER_MATCHED_SUCCESS",
+                        "readerName", readerName,
+                        "message", "Tuyệt vời! Hệ thống đã tìm thấy Reader " + readerName + " tương thích với năng lượng của bạn. Khám phá ngay nhé!",
+                        "sound", "success_ding.mp3"
+                );
+                sendDataToUser(customerId, data);
             }
         });
     }

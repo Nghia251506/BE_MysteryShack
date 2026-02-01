@@ -1,10 +1,16 @@
 package org.example.be_eproject_sem4.Controller;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.example.be_eproject_sem4.Dto.Auth.UpdateProfileRequest;
 import org.example.be_eproject_sem4.Dto.Auth.UserDto;
 import org.example.be_eproject_sem4.Entity.User;
+import org.example.be_eproject_sem4.Security.JwtTokenProvider;
+import org.example.be_eproject_sem4.Service.Rating.RatingService;
 import org.example.be_eproject_sem4.Service.User.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +26,8 @@ public class UserController {
     @Autowired
     private UserService userService;
     @Autowired
+    private RatingService jwtTokenProvider;
+    @Autowired
     private org.example.be_eproject_sem4.Repository.UserRepository userRepository;
 
     /**
@@ -29,15 +37,20 @@ public class UserController {
      * Ví dụ: /api/users/readers/random-top?excludeId=8
      */
     @GetMapping("/readers/random-top")
-    public ResponseEntity<User> getRandomTopReader(@RequestParam(required = false) Long excludeId) {
-        User result;
-        if (excludeId != null) {
-            result = userService.getRandomTopReaderExcludingMe(excludeId);
-        } else {
-            result = userService.getRandomTopReader();
-        }
+    public ResponseEntity<User> getRandomTopReader(
+            @RequestParam(required = false) List<Long> excludeIds,
+            HttpServletRequest request // Lấy ID khách từ request cho bảo mật
+    ) {
+        // 1. Lấy ID khách hàng từ Token/Cookie (Hàm ông đã viết)
+        Long customerId = jwtTokenProvider.getCustomerIdFromRequest(request);
 
-        return result != null ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();
+        // 2. Gọi Service xử lý trọn gói logic
+        User result = userService.findRandomReader(excludeIds, customerId);
+
+        // 3. Trả về kết quả
+        return (result != null)
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.noContent().build();
     }
 
     // lấy profile chi tiết

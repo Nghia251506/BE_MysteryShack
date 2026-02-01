@@ -34,7 +34,7 @@ public class InterpretationForm {
 
     @Column(name = "interpretation_3", columnDefinition = "TEXT")
     private String interpretation3; // Luận giải cho lá 3
-    @Column(name = "advice")
+    @Column(name = "advice", columnDefinition = "TEXT")
     private String advice;
     @Column(name =  "qr_payment", columnDefinition = "LONGTEXT" )
     private String qrPayment;

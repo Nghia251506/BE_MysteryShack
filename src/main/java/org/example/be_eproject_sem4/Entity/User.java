@@ -48,7 +48,7 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @Column(name = "profile_picture", length = 255)
+    @Column(name = "profile_picture", columnDefinition = "LONGTEXT")
     private String profilePicture;
 
     @Column(name = "is_verified", nullable = false)
@@ -56,11 +56,13 @@ public class User {
 
     // Dành riêng cho Reader
     @Column(name = "elo_score", nullable = false)
-    private int eloScore = 1000;
+    private double eloScore = 1000;
     @Column(name = "qr_code", columnDefinition = "LONGTEXT")
     private String QRCode;
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
+    @Column(name = "is_blocked")
+    private Boolean isBlocked = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -72,8 +74,11 @@ public class User {
 
     // Enum cho role
     public enum Role {
-        CUSTOMER, READER
+        CUSTOMER, READER, ADMIN
     }
+
+    @Column(name = "reputation")
+    private Double reputation = 1.0;
 
     // Helper method để check role (tùy chọn)
     public boolean isReader() {

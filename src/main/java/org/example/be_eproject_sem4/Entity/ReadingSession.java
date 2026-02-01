@@ -53,12 +53,35 @@ public class ReadingSession {
     private String fullName;
     @Column(name = "birth_date", nullable = true)
     private LocalDate birthDate;
+    @Column(name = "is_rated", nullable = false, columnDefinition = "boolean default false")
+    private Boolean isRated = false;
 
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
+
+    private Instant completedAt;
+
+    @Column(name = "response_time")
+    private Double responseTime;
+
+    // Hàm lấy response time để truyền vào EloService
+    public Double calculateResponseTime() {
+        if (createdAt == null || acceptedAt == null) return 999.0;
+
+        // Chuyển LocalDateTime (createdAt) sang Instant để cùng kiểu với acceptedAt
+        // Giả định hệ thống dùng múi giờ Việt Nam (UTC+7)
+        Instant createdInstant = createdAt.atZone(java.time.ZoneId.systemDefault()).toInstant();
+
+        long diffInSeconds = java.time.Duration.between(createdInstant, acceptedAt).getSeconds();
+        return (double) diffInSeconds / 60.0;
+    }
+    public void completeSession(String completedStatus) {
+        this.status = completedStatus; // "COMPLETED"
+        this.completedAt = Instant.now();
+    }
 
     @ElementCollection(fetch = FetchType.EAGER)
     private Set<Long> rejectedReaderIds = new HashSet<>();
