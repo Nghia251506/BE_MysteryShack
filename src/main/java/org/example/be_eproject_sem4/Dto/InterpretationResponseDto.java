@@ -1,5 +1,6 @@
 package org.example.be_eproject_sem4.Dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.example.be_eproject_sem4.Entity.InterpretationStatus;
@@ -22,6 +23,7 @@ public class InterpretationResponseDto {
 
     // 2. Thông tin câu hỏi
     private String questionContent;
+    private BigDecimal amount;
 
     // 3. Danh sách lá bài
     private List<SelectedCardDto> selectedCards;

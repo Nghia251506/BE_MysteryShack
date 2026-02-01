@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -79,22 +80,39 @@ public class ReadingSessionService {
     }
 
     @Transactional
-    public List<ReadingSessionSimpleDto> getMatchedSessionsForReader() {
+    public BigDecimal getTotalIncomeForReader() {
+        // A. Lấy thông tin Reader đang đăng nhập
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
 
         User reader = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader đang đăng nhập"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
 
-        if (!reader.getRole().equals(User.Role.READER)) {
-            throw new RuntimeException("Chỉ reader mới xem được list matched");
-        }
+        // B. Tìm các session có trạng thái COMPLETED (hoặc status = 2 tùy DB của ông)
+        List<ReadingSession> completedSessions = sessionRepository.findByReaderAndStatus(reader, "COMPLETED");
 
-        // 1. Lấy Entity từ Repository
-        List<ReadingSession> sessions = sessionRepository.findByReaderAndStatus(reader, "MATCHED");
+        // C. Tính tổng amount bằng Stream
+        // Sử dụng reduce để cộng BigDecimal an toàn
+        return completedSessions.stream()
+                .map(ReadingSession::getAmount)
+                .filter(amount -> amount != null) // Lọc bỏ trường hợp amount bị null cho chắc
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
-        // 2. Dùng Mapper chuyển sang DTO trước khi return
-        return readingSessionMapper.toSimpleDtoList(sessions);
+    @Transactional()
+    public Long getTotalCompletedSessionsForReader() {
+        // A. Lấy thông tin Reader đang đăng nhập từ Security Context
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        User reader = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Reader đang đăng nhập"));
+
+        // B. Gọi Repo với tham số status là "COMPLETED"
+        // Ông có thể dùng String cứng hoặc một Enum/Constant nếu có
+        Long totalSessions = sessionRepository.countCompletedSessionsByReader(reader, "COMPLETED");
+
+        return totalSessions != null ? totalSessions : 0L;
     }
 
     @Transactional

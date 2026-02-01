@@ -71,6 +71,7 @@ public class InterpretationService {
 
         form.setStatus(InterpretationStatus.SENT_TO_CUSTOMER);
         session.setStatus("INTERPRETED");
+        session.setAmount(dto.getAmount());
 
         InterpretationForm savedForm = formRepository.save(form);
 
