@@ -12,6 +12,7 @@ import org.example.be_eproject_sem4.Mapper.ReadingSessionMapper;
 import org.example.be_eproject_sem4.Repository.*;
 import org.example.be_eproject_sem4.Service.FCM.FCMService;
 import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
+import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -58,6 +59,9 @@ public class ReadingSessionService {
     private FcmTokenService fcmTokenService;
     @Autowired
     private FcmTokenRepository fcmTokenRepository;
+
+    @Autowired
+    private NotificationManager notificationManager;
 
     ReadingSessionService(PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
@@ -137,25 +141,7 @@ public class ReadingSessionService {
         updateHistoryStatus(sessionId, ReadingStatus.ACCEPTED, currentReader);
 
         // 4. LOGIC GỬI FCM THỰC THẾ
-        User customer = session.getCustomer(); // Đảm bảo Entity Session có liên kết với Customer
-        String customerToken = fcmTokenService.getTokenByUserId(customer.getId());
-
-        if (customerToken != null) {
-            // Chuẩn bị dữ liệu kèm theo (Data payload)
-            Map<String, String> data = new HashMap<>();
-            data.put("sessionId", sessionId.toString());
-            data.put("type", "SESSION_ACCEPTED");
-
-            // Gọi FCMService để bắn thông báo
-            fcmService.sendPushNotification(
-                    customerToken,
-                    "Yêu cầu đã được chấp nhận!",
-                    "Reader " + currentReader.getFullName() + " đã sẵn sàng xem bài cho bạn.",
-                    data);
-            System.out.println(">>> Đã bắn thông báo FCM tới Customer: " + customer.getUsername());
-        } else {
-            System.out.println(">>> Không tìm thấy Token cho Customer ID: " + customer.getId() + ". Bỏ qua gửi FCM.");
-        }
+        notificationManager.notifyCustomerAccepted(session.getCustomer().getId(), currentReader.getFullName());
 
         System.out.println("Thông báo cho customer: Request #" + sessionId + " đã được reader chấp nhận.");
     }
@@ -184,31 +170,7 @@ public class ReadingSessionService {
         updateHistoryStatus(sessionId, ReadingStatus.PENDING, null);
 
         // --- LUỒNG GỬI FCM CHO KHÁCH HÀNG ---
-        if (customer != null) {
-            // Sử dụng cấu trúc từ FcmTokenService của bạn để lấy danh sách token
-            List<FcmToken> tokens = fcmTokenRepository.findByUserId(customer.getId());
-
-            if (tokens != null && !tokens.isEmpty()) {
-                // Chuẩn bị dữ liệu đính kèm (data payload)
-                Map<String, String> notificationData = Map.of(
-                        "sessionId", String.valueOf(sessionId),
-                        "type", "SESSION_REJECTED",
-                        "status", "PENDING");
-
-                String title = "Reader đã từ chối yêu cầu";
-                String body = "Reader " + currentReader.getFullName()
-                        + " hiện không thể tham gia. Hệ thống đang tìm Reader khác cho bạn...";
-
-                // Lặp qua danh sách token để gửi đến tất cả thiết bị của khách hàng
-                tokens.forEach(fcmToken -> {
-                    fcmService.sendPushNotification(
-                            fcmToken.getToken(),
-                            title,
-                            body,
-                            notificationData);
-                });
-            }
-        }
+        notificationManager.notifyCustomerReaderRejected(customer.getId(), currentReader.getFullName());
 
         // 5. Chạy Async để tìm Reader mới sau 5 giây
         CompletableFuture.runAsync(() -> {
@@ -286,7 +248,7 @@ public class ReadingSessionService {
                 .createdAt(LocalDateTime.now())
                 .build();
         historyRepository.save(history);
-
+        notificationManager.notifyCustomerSearching(customer.getId());
         // 3. Tiến hành ghép Reader (Sẽ update lại History nếu tìm thấy)
         assignReaderToSession(savedSession, dto.getReaderId());
         savedSession.setMatchedAt(Instant.now());
@@ -322,21 +284,7 @@ public class ReadingSessionService {
             System.out.println(">>> [MATCH SUCCESS] Assigned Reader: " + targetReader.getFullName());
 
             // --- GỬI THÔNG BÁO CHO READER ---
-            sendNotificationToUser(
-                    targetReader,
-                    "Yêu cầu mới!",
-                    "Khách hàng " + session.getCustomer().getFullName() + " đang chờ kết nối với bạn.",
-                    String.valueOf(session.getId()),
-                    "NEW_MATCHING_REQUEST");
-
-            // --- GỬI THÔNG BÁO CHO KHÁCH HÀNG (CUSTOMER) ---
-            sendNotificationToUser(
-                    session.getCustomer(),
-                    "Đã tìm thấy Reader!",
-                    "Reader " + targetReader.getFullName() + " đã sẵn sàng. Hãy kiên nhẫn chờ cho đến khi Reader chấp nhận!",
-                    String.valueOf(session.getId()),
-                    "READER_FOUND");
-
+            notificationManager.notifyReaderNewRequest(session.getReader().getId(), session.getId(),session.getFullName());
         } else {
             session.setStatus("PENDING");
             sessionRepository.save(session);

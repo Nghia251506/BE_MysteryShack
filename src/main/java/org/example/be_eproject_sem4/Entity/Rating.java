@@ -20,8 +20,8 @@ public class Rating {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "request_id", nullable = false)
+    @OneToOne
+    @JoinColumn(name = "request_id", nullable = false, unique = true)
     private ReadingSession request;
     @ManyToOne
     @JoinColumn(name = "customer_id", nullable = false)
@@ -31,9 +31,11 @@ public class Rating {
     private User reader;
     @Column(name = "rating", nullable = false)
     private Integer ratingValue;
-    @Column(name = "review", columnDefinition = "TEXT")
-    private String comment;
+    @Column(name = "reply_comment", columnDefinition = "LONGTEXT")
+    private String replyComment;
+    @Column(name = "is_anonymous")
+    private Boolean isAnonymous = false;
     @CreationTimestamp
     private Instant createdAt;
-    
+    private Instant repliedAt;
 }

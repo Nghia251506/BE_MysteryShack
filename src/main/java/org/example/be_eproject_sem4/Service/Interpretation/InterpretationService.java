@@ -53,7 +53,18 @@ public class InterpretationService {
         form.setInterpretation2(dto.getInterpretation2());
         form.setInterpretation3(dto.getInterpretation3());
         form.setAdvice(dto.getAdvice());
+        if (session.getReader() != null) {
+            // Ưu tiên lấy QR trực tiếp từ hồ sơ Reader trong Database
+            form.setQrPayment(session.getReader().getQRCode());
+        } else if (dto.getQrPayment() != null) {
+            // Nếu hồ sơ không có thì mới lấy từ DTO nộp lên
+            form.setQrPayment(dto.getQrPayment().getQRCode());
+        }
 
+        // Kiểm tra lại lần cuối trước khi lưu
+        if (form.getQrPayment() == null) {
+            throw new RuntimeException("Reader chưa cập nhật mã QR thanh toán!");
+        }
         if (dto.getInterpretation1() == null || dto.getInterpretation1().trim().isEmpty()) {
             throw new RuntimeException("Nội dung luận giải lá bài 1 không được để trống.");
         }
@@ -83,20 +94,11 @@ public class InterpretationService {
         // ==================================================================
 
         // A. Thông báo cho Reader (Xác nhận thành công)
-        sendNotificationToUser(
-                session.getReader(),
-                "Nộp bài thành công!",
-                "Luận giải của bạn đã được gửi đến khách hàng. Đang chờ thanh toán.",
-                String.valueOf(sessionId),
-                "INTERPRETATION_SUBMITTED");
-
-        // B. Thông báo cho Khách hàng (Báo có kết quả)
-        sendNotificationToUser(
-                session.getCustomer(),
-                "Đã có kết quả luận giải!",
-                "Reader " + session.getReader().getFullName() + " đã gửi luận giải cho bạn. Hãy vào xem ngay!",
-                String.valueOf(sessionId),
-                "INTERPRETATION_RECEIVED");
+        notificationManager.notifyReadingFinished(
+            session.getCustomer().getId(), 
+            sessionId, 
+            session.getReader().getFullName()
+        );
 
         return interpretationMapper.toDto(savedForm);
     }
@@ -151,7 +153,10 @@ public class InterpretationService {
         formRepository.save(form);
         sessionRepository.save(session);
         Long customerId = session.getCustomer().getId();
-        notificationManager.notifyCustomerPaymentConfirmed(customerId, sessionId);
+        notificationManager.notifyCustomerPaymentConfirmed(
+            session.getCustomer().getId(), 
+            sessionId
+        );
     }
 
     /**
@@ -178,11 +183,12 @@ public class InterpretationService {
 
         // 4. BẮN THÔNG BÁO CHO READER
         // Lấy thông tin Reader từ Session
-        ReadingSession session = form.getRequestId();
-        if (session.getReader() != null) {
+        if (form.getRequestId().getReader() != null) {
             notificationManager.notifyReaderPaymentSent(
-                    session.getReader().getId(),
-                    sessionId);
+                    form.getRequestId().getReader().getId(),
+                sessionId, 
+                form.getRequestId().getFullName() // Gửi thêm tên để Reader biết ai trả
+            );
         }
     }
 }

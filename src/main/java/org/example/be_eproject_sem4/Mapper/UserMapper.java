@@ -13,28 +13,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserMapper {
 
-    // Map từ Entity User → MeResponse (thông tin user hiện tại)
-    // public MeResponse toMeResponse(User user) {
-    //     if (user == null) {
-    //         return null;
-    //     }
-
-    //     return MeResponse.builder()
-    //             .id(user.getId())
-    //             .username(user.getUsername())
-    //             .email(user.getEmail())
-    //             .fullName(user.getFullName())
-    //             .phone(user.getPhone())
-    //             .role(user.getRole())
-    //             .bio(user.getBio())
-    //             .profilePicture(user.getProfilePicture())
-    //             .isVerified(user.isVerified())
-    //             .eloScore(user.getEloScore())
-    //             .createdAt(user.getCreatedAt())
-    //             .updatedAt(user.getUpdatedAt())
-    //             .build();
-    // }
-
     // Map từ RegisterRequest → User entity (khi đăng ký)
     public User toEntity(RegisterRequestDto request) {
         if (request == null) {

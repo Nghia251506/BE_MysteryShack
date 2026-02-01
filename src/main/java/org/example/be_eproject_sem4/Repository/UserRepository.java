@@ -23,8 +23,13 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Object findByEmail(String email);
 
     List<User> findTop10ByRoleOrderByEloScoreDesc(User.Role role);
-    List<User> findTop10ByRoleAndIdNotOrderByEloScoreDesc(User.Role role, Long userId);
-    // Optional<Reader> findByUserId(Long userId);
+    // Dùng cho Matching thông minh
+    @Query("SELECT u FROM User u WHERE u.role = 'READER' " +
+            "AND u.isActive = true " +
+            "AND u.isVerified = true " +
+            "AND u.isBlocked = false " +
+            "AND u.id NOT IN :excludedIds")
+    List<User> findAvailableReadersForMatching(@Param("excludedIds") List<Long> excludedIds);
 
     Page<User> findByRole(User.Role role, Pageable pageable);
 
