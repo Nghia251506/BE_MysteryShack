@@ -88,7 +88,7 @@ public class UserService {
                 : Sort.by(sortBy).descending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        return userRepository.findByRole(role, (java.awt.print.Pageable) pageable);
+        return userRepository.findByRole(role, pageable);
     }
 
     public Page<User> getAdvancedSearch(

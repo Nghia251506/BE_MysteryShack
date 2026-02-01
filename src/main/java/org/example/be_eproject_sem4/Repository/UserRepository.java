@@ -8,8 +8,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.awt.print.Pageable;
+import org.springframework.data.domain.Pageable;
 import java.io.Reader;
 import java.util.List;
 import java.util.Optional;
@@ -28,4 +27,5 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     // Optional<Reader> findByUserId(Long userId);
 
     Page<User> findByRole(User.Role role, Pageable pageable);
+
 }
