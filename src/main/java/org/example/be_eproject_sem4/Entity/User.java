@@ -56,14 +56,14 @@ public class User {
 
     // Dành riêng cho Reader
     @Column(name = "elo_score", nullable = false)
-    private double eloScore = 1000;
+    private double eloScore = 500;
     @Column(name = "qr_code", columnDefinition = "LONGTEXT")
     private String QRCode;
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
     @Column(name = "is_blocked")
     private Boolean isBlocked = false;
-    @Column(name = "before_elo",columnDefinition = "double default 1000")
+    @Column(name = "before_elo",columnDefinition = "double")
     private Double eloBeforeAction;
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -75,16 +75,20 @@ public class User {
 
     // Enum cho role
     public enum Role {
-        CUSTOMER, READER, ADMIN
+        CUSTOMER, READER, ADMIN, SUPPERADMIN
     }
 
-    @Column(name = "reputation",columnDefinition = "double default 0")
-    private Double reputation;
+    @Column(name = "reputation",columnDefinition = "double default 0.0")
+    private Double reputation = 0.0;
+    @Column (name ="is_busy", columnDefinition = "boolean default false")
+    private Boolean isBusy = false;
 
     // Helper method để check role (tùy chọn)
     public boolean isReader() {
         return this.role == Role.READER;
     }
+    public boolean isAdmin() {return this.role == Role.ADMIN;}
+    public boolean isSupperAdmin() {return this.role == Role.SUPPERADMIN;}
 
     public boolean isCustomer() {
         return this.role == Role.CUSTOMER;

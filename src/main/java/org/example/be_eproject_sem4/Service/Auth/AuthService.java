@@ -76,7 +76,7 @@ public class AuthService {
                                 .phone(dto.getPhone())
                                 .role(userRole)
                                 .isVerified(false) // Reader cần verify sau
-                                .eloScore(1000)
+                                .eloScore(500)
                                 .build();
 
                 user = userRepository.save(user);

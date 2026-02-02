@@ -23,6 +23,7 @@ public abstract class InterpretationMapper {
     @Mapping(target = "selectedCards", source = "requestId.selectedCards")
     @Mapping(target = "reader", ignore = true) // Sẽ map trong AfterMapping
     @Mapping(target = "amount", source = "requestId.amount")
+    @Mapping(target = "reader.profilePicture", source = "avatar")
     public abstract InterpretationResponseDto toDto(InterpretationForm entity);
 
     @AfterMapping

@@ -27,11 +27,10 @@ public class InterpretationResponseDto {
 
     // 3. Danh sách lá bài
     private List<SelectedCardDto> selectedCards;
-
     @Data
     public static class ReaderInfo {
         private Long id;
         private String fullName;
-        private String avatar;
+        private String profilePicture;
     }
 }

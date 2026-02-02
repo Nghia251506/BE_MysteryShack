@@ -44,4 +44,10 @@ public class InterpretationController {
         interpretationService.customerNotifyPaid(sessionId);
         return ResponseEntity.ok("Đã gửi thông báo thanh toán cho Reader.");
     }
+
+    @GetMapping("/{sessionId}")
+    public ResponseEntity<InterpretationResponseDto> getInterpretationById(@PathVariable Long sessionId) {
+        InterpretationResponseDto response = interpretationService.getDetail(sessionId);
+        return ResponseEntity.ok(response);
+    }
 }

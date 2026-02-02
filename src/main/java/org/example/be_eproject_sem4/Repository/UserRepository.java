@@ -26,6 +26,7 @@ public interface UserRepository extends JpaRepository<User, Long>{
             "AND u.isActive = true " +
             "AND u.isVerified = true " +
             "AND u.isBlocked = false " +
+            "AND u.isBusy = false " +
             "AND u.id NOT IN :excludedIds")
     List<User> findAvailableReadersForMatching(@Param("excludedIds") List<Long> excludedIds);
 

@@ -156,8 +156,9 @@ public class ReadingSessionService {
         session.setStatus("ACCEPTED");
         session.setAcceptedAt(Instant.now());
         session.getReader().setEloBeforeAction(session.getReader().getEloScore());
+        session.getReader().setIsBusy(true);
         sessionRepository.save(session);
-        updateHistoryStatus(sessionId, ReadingStatus.ACCEPTED, currentReader);
+        updateHistoryStatus(sessionId, ReadingStatus.PROCESSING, currentReader);
 
         // 4. LOGIC GỬI FCM THỰC THẾ
         notificationManager.notifyCustomerAccepted(session.getCustomer().getId(), currentReader.getFullName());

@@ -26,6 +26,8 @@ public class InterpretationForm {
     @JoinColumn(name = "history_id", referencedColumnName = "id")
     @JsonIgnore // Ngắt vòng lặp JSON khi API trả về
     private History history;
+    @Column(name = "avatar_reader")
+    private String avatar;
     @Column(name = "interpretation_1", columnDefinition = "TEXT")
     private String interpretation1; // Luận giải cho lá 1
 

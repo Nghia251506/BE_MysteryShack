@@ -56,6 +56,7 @@ public class InterpretationService {
         form.setInterpretation2(dto.getInterpretation2());
         form.setInterpretation3(dto.getInterpretation3());
         form.setAdvice(dto.getAdvice());
+        form.setAvatar(session.getReader().getProfilePicture());
         if (session.getReader() != null) {
             // Ưu tiên lấy QR trực tiếp từ hồ sơ Reader trong Database
             form.setQrPayment(session.getReader().getQRCode());
@@ -76,6 +77,7 @@ public class InterpretationService {
         session.setStatus("INTERPRETED");
         session.setAmount(dto.getAmount());
         session.setSubmitedAt(Instant.now());
+        session.getReader().setIsBusy(false);
 
         InterpretationForm savedForm = formRepository.save(form);
 
@@ -117,6 +119,7 @@ public class InterpretationService {
         history.setStatus(ReadingStatus.WAITING_PAYMENT);
         history.setInterpretationForm(form);
         historyRepository.save(history);
+        form.setHistory(history);
 
         // ==================================================================
         // 4. LOGIC FCM: THÔNG BÁO CHO CẢ READER VÀ CUSTOMER
@@ -157,6 +160,14 @@ public class InterpretationService {
         return interpretationMapper.toDto(form);
     }
 
+    /**
+     * Lấy dữ liệu chi tiết từng bài luận cho Reader xem (View Detail)
+     */
+    public InterpretationResponseDto getDetail(Long sessionId){
+        InterpretationForm form = formRepository.findByRequestIdId(sessionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết luận giải này"));
+        return interpretationMapper.toDto(form);
+    }
     /**
      * Reader xác nhận đã nhận được tiền từ Khách
      */
