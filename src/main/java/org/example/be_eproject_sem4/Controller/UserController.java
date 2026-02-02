@@ -91,24 +91,6 @@ public class UserController {
         return ResponseEntity.ok(updated);
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<Page<User>> searchUsers(
-            @RequestParam User.Role role,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Boolean isActive,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
-            @RequestParam(required = false) Integer minElo,
-            @RequestParam(required = false) Integer maxElo,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction) {
-
-        return ResponseEntity.ok(userService.getAdvancedSearch(
-                role, keyword, isActive, startDate, endDate, minElo, maxElo, page, size, sortBy, direction));
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<User>  updateUserProfile(@PathVariable Long id, @RequestBody UserUpdateDto dto){
         User updated = userService.updateProfile(id,dto);
