@@ -15,6 +15,7 @@ import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
 import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -153,7 +154,7 @@ public class ReadingSessionService {
         }
 
         // 3. Cập nhật Session và Lịch sử
-        session.setStatus("ACCEPTED");
+        session.setStatus("PROCESSING");
         session.setAcceptedAt(Instant.now());
         session.getReader().setEloBeforeAction(session.getReader().getEloScore());
         session.getReader().setIsBusy(true);
@@ -203,6 +204,16 @@ public class ReadingSessionService {
                 Thread.currentThread().interrupt();
             }
         });
+    }
+
+    @Transactional()
+    public ReadingSession getLatestProcessingSession(Long readerId) {
+        // PageRequest.of(trang_so, kich_thuoc) -> lấy trang 0, chỉ 1 bản ghi
+        List<ReadingSession> sessions = sessionRepository.findCurrentProcessingSession(
+                readerId, PageRequest.of(0, 1)
+        );
+
+        return sessions.isEmpty() ? null : sessions.get(0);
     }
 
     // Hàm này xử lý việc tìm kiếm lại

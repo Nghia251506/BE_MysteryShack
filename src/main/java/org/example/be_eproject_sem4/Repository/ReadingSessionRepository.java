@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.example.be_eproject_sem4.Entity.ReadingSession;
 import org.example.be_eproject_sem4.Entity.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,4 +20,8 @@ public interface ReadingSessionRepository extends JpaRepository<ReadingSession, 
                                                     @Param("status") String status);
     @Query("SELECT COUNT(s) FROM ReadingSession s WHERE s.reader = :reader AND s.status = :status")
     Long countCompletedSessionsByReader(@Param("reader") User reader,@Param("status") String status);
+    @Query("SELECT s FROM ReadingSession s " +
+            "WHERE s.reader.id = :readerId AND s.status = 'PROCESSING' " +
+            "ORDER BY s.acceptedAt DESC")
+    List<ReadingSession> findCurrentProcessingSession(@Param("readerId") Long readerId, Pageable pageable);
 }

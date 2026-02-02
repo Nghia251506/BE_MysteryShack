@@ -103,7 +103,7 @@ public class NotificationManager {
             data.put("sessionId", sessionId.toString());
             data.put("readerName", rName);
             data.put("message", "Reader " + rName + " đã gửi kết quả luận giải!");
-            data.put("sound", "notification.mp3");
+            data.put("sound", "success_ding.mp3");
             sendDataToUser(customerId, data);
         });
     }
@@ -117,7 +117,7 @@ public class NotificationManager {
             data.put("sessionId", sessionId.toString());
             data.put("customerName", cName);
             data.put("message", "Khách hàng " + cName + " báo đã chuyển khoản.");
-            data.put("sound", "notification.mp3");
+            data.put("sound", "tingting.mp3");
             sendDataToUser(readerId, data);
         });
     }

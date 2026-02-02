@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 public class EloService {
 
     // Thiết lập ngưỡng để tránh lạm phát điểm hoặc âm điểm
-    private static final double MAX_ELO = 3000.0;
-    private static final double MIN_ELO = 500.0;
+    private static final double MAX_ELO = 500.0;
+    private static final double MIN_ELO = 100.0;
 
     public EloCalculationResponse calculateNewElo(EloCalculationRequest request) {
         // 1. Tính Chỉ số Phản hồi (P)

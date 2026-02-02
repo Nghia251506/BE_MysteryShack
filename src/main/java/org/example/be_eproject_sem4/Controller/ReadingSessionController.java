@@ -67,6 +67,11 @@ public class ReadingSessionController {
         return ResponseEntity.ok(sessionService.getTotalCompletedSessionsForReader());
     }
 
+    @GetMapping("/reader/{readerId}")
+    public ResponseEntity<ReadingSession> getAllSessionsByReader(@PathVariable Long readerId) {
+        return ResponseEntity.ok(sessionService.getLatestProcessingSession(readerId));
+    }
+
 //    @GetMapping("/customer")
 //    @PreAuthorize("hasRole('CUSTOMER')")
 //    public ResponseEntity<List> getReadingSessionsForCustomer() {
