@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -54,17 +55,23 @@ public class ReadingSessionController {
     }
 
     // 6. Reader xem list request đã matched với mình
-    @GetMapping("/matched")
-    @PreAuthorize("hasRole('READER')")
-    public ResponseEntity<List> getMatchedSessions() {
-        return ResponseEntity.ok(sessionService.getMatchedSessionsForReader());
+    @GetMapping("/total-income")
+    public ResponseEntity<BigDecimal> getTotalIncome() {
+        // Gọi hàm Service mình vừa viết ở bước trước
+        BigDecimal total = sessionService.getTotalIncomeForReader();
+        return ResponseEntity.ok(total);
     }
 
-    @GetMapping("/customer")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<List> getReadingSessionsForCustomer() {
-        return ResponseEntity.ok(sessionService.getMatchedSessionsForReader());
+    @GetMapping("/total-sessions")
+    public ResponseEntity<Long> getTotalSessions() {
+        return ResponseEntity.ok(sessionService.getTotalCompletedSessionsForReader());
     }
+
+//    @GetMapping("/customer")
+//    @PreAuthorize("hasRole('CUSTOMER')")
+//    public ResponseEntity<List> getReadingSessionsForCustomer() {
+//        return ResponseEntity.ok(sessionService.getMatchedSessionsForReader());
+//    }
 
     // 7. Reader accept request
     @PostMapping("/{id}/accept")

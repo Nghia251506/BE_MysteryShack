@@ -1,16 +1,17 @@
 package org.example.be_eproject_sem4.Service.Interpretation;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import org.example.be_eproject_sem4.Dto.EloCalculationRequest;
+import org.example.be_eproject_sem4.Dto.EloCalculationResponse;
 import org.example.be_eproject_sem4.Dto.InterpretationResponseDto;
 import org.example.be_eproject_sem4.Dto.InterpretationSubmitDto;
 import org.example.be_eproject_sem4.Entity.*;
 import org.example.be_eproject_sem4.Mapper.InterpretationMapper;
-import org.example.be_eproject_sem4.Repository.FcmTokenRepository;
-import org.example.be_eproject_sem4.Repository.HistoryRepository;
-import org.example.be_eproject_sem4.Repository.InterpretationFormRepository;
-import org.example.be_eproject_sem4.Repository.ReadingSessionRepository;
+import org.example.be_eproject_sem4.Repository.*;
+import org.example.be_eproject_sem4.Service.EloService;
 import org.example.be_eproject_sem4.Service.FCM.FCMService;
 import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
 import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
@@ -32,6 +33,8 @@ public class InterpretationService {
     private final FcmTokenService fcmTokenService;
     private final FcmTokenRepository fcmTokenRepository;
     private final NotificationManager notificationManager;
+    private final EloService eloService;
+    private final UserRepository userRepository;
 
     /**
      * Reader nộp bài luận giải cho 3 lá bài kèm lời khuyên và QR
@@ -71,8 +74,34 @@ public class InterpretationService {
 
         form.setStatus(InterpretationStatus.SENT_TO_CUSTOMER);
         session.setStatus("INTERPRETED");
+        session.setAmount(dto.getAmount());
+        session.setSubmitedAt(Instant.now());
 
         InterpretationForm savedForm = formRepository.save(form);
+
+        // ==================================================================
+        // TÍNH TOÁN ELO TẠM THỜI (Khi khách chưa vote)
+        // ==================================================================
+        User reader = session.getReader();
+        if (reader != null && session.getAcceptedAt() != null) {
+            // Tính số phút chênh lệch
+            long responseTimeMinutes = java.time.Duration.between(session.getAcceptedAt(), Instant.now()).toMinutes();
+
+            EloCalculationRequest eloRequest = new EloCalculationRequest();
+            eloRequest.setCurrentElo(reader.getEloScore());
+            eloRequest.setUserReputation(reader.getReputation() != null ? reader.getReputation() : 1000.0);
+            eloRequest.setResponseTime((int) responseTimeMinutes);
+            eloRequest.setCompleted(true);
+            eloRequest.setStars(0); // Chưa có sao
+            eloRequest.setPositiveRate(1.0); // Mặc định rate tốt
+            eloRequest.setKFactor(32);
+
+            EloCalculationResponse eloResponse = eloService.calculateNewElo(eloRequest);
+
+            // Cập nhật Elo cho Reader ngay lập tức
+            reader.setEloScore(eloResponse.getNewElo());
+            userRepository.save(reader);
+        }
 
         // 3. Cập nhật History
         History history = historyRepository.findByRequestId(sessionId)
@@ -142,6 +171,7 @@ public class InterpretationService {
         // Update Session
         ReadingSession session = form.getRequestId();
         session.setStatus("COMPLETED");
+        session.setCompletedAt(Instant.now());
 
         // Update History -> COMPLETED (Hoàn tất toàn bộ quy trình)
         History history = historyRepository.findByRequestId(sessionId)

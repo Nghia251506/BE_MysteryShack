@@ -17,4 +17,6 @@ public interface ReadingSessionRepository extends JpaRepository<ReadingSession, 
             "AND s.isRated = false")
     List<ReadingSession> findPendingRatingsByCustomerId(@Param("userId") Long userId,
                                                     @Param("status") String status);
+    @Query("SELECT COUNT(s) FROM ReadingSession s WHERE s.reader = :reader AND s.status = :status")
+    Long countCompletedSessionsByReader(@Param("reader") User reader,@Param("status") String status);
 }

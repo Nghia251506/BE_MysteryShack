@@ -26,6 +26,8 @@ public class UserUpdateDto {
     // Profile picture (URL hoặc file upload, tùy cách bạn xử lý)
     private String profilePicture;
 
+    private String qrCode;
+
     // Nếu cho phép update role (thường không cho, chỉ admin update)
     private User.Role role;
 }

@@ -1,7 +1,10 @@
 package org.example.be_eproject_sem4.Service.User;
 
 import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
+import org.example.be_eproject_sem4.Dto.Auth.UserUpdateDto;
 import org.example.be_eproject_sem4.Entity.User;
+import org.example.be_eproject_sem4.Mapper.UserMapper;
 import org.example.be_eproject_sem4.Repository.UserRepository;
 import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +20,14 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private NotificationManager notificationManager;
+
+    private final UserRepository userRepository;
+
+    private final UserMapper userMapper;
+
+    private final NotificationManager notificationManager;
 
     // Lấy ngẫu nhiên 1 trong những người giỏi nhất (Dùng cho khách vãng lai)
     public User getRandomTopReader() {
@@ -129,6 +135,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
+
     public Page<User> getUsersByRole(User.Role role, int page, int size, String sortBy, String direction) {
         // Kiểm tra hướng sắp xếp (ASC hoặc DESC)
         Sort sort = direction.equalsIgnoreCase(Sort.Direction.ASC.name())
@@ -188,5 +195,13 @@ public class UserService {
         };
 
         return userRepository.findAll(spec, pageable);
+    }
+    @Transactional
+    public User updateProfile(Long id, UserUpdateDto dto) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        userMapper.updateUserFromDto(dto, user);
+        User update = userRepository.save(user);
+        return update;
     }
 }

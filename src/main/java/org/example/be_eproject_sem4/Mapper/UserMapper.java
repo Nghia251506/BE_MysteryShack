@@ -9,7 +9,6 @@ import org.example.be_eproject_sem4.Dto.Auth.UserUpdateDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Entity.User.Role;
 import org.springframework.stereotype.Component;
-
 @Component
 public class UserMapper {
 
@@ -49,6 +48,9 @@ public class UserMapper {
         }
         if (dto.getProfilePicture() != null) {
             user.setProfilePicture(dto.getProfilePicture());
+        }
+        if (dto.getQrCode() != null) {
+            user.setQRCode(dto.getQrCode());
         }
         // Không cho update role, email, username (trừ admin)
     }

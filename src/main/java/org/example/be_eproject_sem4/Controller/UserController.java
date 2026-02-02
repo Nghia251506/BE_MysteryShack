@@ -1,5 +1,6 @@
 package org.example.be_eproject_sem4.Controller;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,6 +10,7 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.be_eproject_sem4.Dto.Auth.UpdateProfileRequest;
 import org.example.be_eproject_sem4.Dto.Auth.UserDto;
+import org.example.be_eproject_sem4.Dto.Auth.UserUpdateDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Security.JwtTokenProvider;
 import org.example.be_eproject_sem4.Service.Rating.RatingService;
@@ -94,8 +96,8 @@ public class UserController {
             @RequestParam User.Role role,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Boolean isActive,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
             @RequestParam(required = false) Integer minElo,
             @RequestParam(required = false) Integer maxElo,
             @RequestParam(defaultValue = "0") int page,
@@ -105,5 +107,11 @@ public class UserController {
 
         return ResponseEntity.ok(userService.getAdvancedSearch(
                 role, keyword, isActive, startDate, endDate, minElo, maxElo, page, size, sortBy, direction));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<User>  updateUserProfile(@PathVariable Long id, @RequestBody UserUpdateDto dto){
+        User updated = userService.updateProfile(id,dto);
+        return ResponseEntity.ok(updated);
     }
 }

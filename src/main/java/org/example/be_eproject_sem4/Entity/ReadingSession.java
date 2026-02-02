@@ -1,6 +1,7 @@
 package org.example.be_eproject_sem4.Entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.type.Decimal;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -10,6 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.example.be_eproject_sem4.Entity.ReadingStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -55,6 +57,7 @@ public class ReadingSession {
     private LocalDate birthDate;
     @Column(name = "is_rated", nullable = false, columnDefinition = "boolean default false")
     private Boolean isRated = false;
+    private Instant submitedAt;
 
     @CreationTimestamp
     private Instant createdAt;
@@ -63,6 +66,8 @@ public class ReadingSession {
     private Instant updatedAt;
 
     private Instant completedAt;
+    @Column(name = "amount", columnDefinition = "decimal(10,2)")
+    private BigDecimal amount;
 
     @Column(name = "response_time")
     private Double responseTime;
