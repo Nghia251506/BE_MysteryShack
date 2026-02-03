@@ -80,31 +80,28 @@ public class VNPayService {
 
     public boolean verifyCallback(Map<String, String> fields) {
         String vnp_SecureHash = fields.get("vnp_SecureHash");
-
-        // Loại bỏ các trường không tham gia vào việc tạo chữ ký
         fields.remove("vnp_SecureHashType");
         fields.remove("vnp_SecureHash");
 
-        // Sắp xếp các trường còn lại
         List<String> fieldNames = new ArrayList<>(fields.keySet());
         Collections.sort(fieldNames);
 
         StringBuilder hashData = new StringBuilder();
-        for (String fieldName : fieldNames) {
+        Iterator<String> itr = fieldNames.iterator();
+        while (itr.hasNext()) {
+            String fieldName = itr.next();
             String fieldValue = fields.get(fieldName);
             if ((fieldValue != null) && (fieldValue.length() > 0)) {
                 hashData.append(fieldName);
                 hashData.append('=');
-                // Lưu ý: Lúc VNPay gửi về, các ký tự đã được encode rồi nên mình dùng trực tiếp luôn
-                hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
-
-                if (fieldNames.indexOf(fieldName) < fieldNames.size() - 1) {
+                // KHÔNG dùng URLEncoder ở đây vì VNPay gửi về data thô để check hash
+                hashData.append(fieldValue);
+                if (itr.hasNext()) {
                     hashData.append('&');
                 }
             }
         }
-
         String checkSum = VNPayUtil.hmacSHA512(hashSecret, hashData.toString());
-        return checkSum.equals(vnp_SecureHash);
+        return checkSum.equalsIgnoreCase(vnp_SecureHash);
     }
 }

@@ -71,47 +71,30 @@ public class PaymentController {
 
     @GetMapping("/vnpay-callback")
     public ResponseEntity<?> handleVNPayCallback(HttpServletRequest request) {
-        // 1. Lấy toàn bộ tham số VNPay gửi về
         Map<String, String> fields = new HashMap<>();
         for (Enumeration<String> params = request.getParameterNames(); params.hasMoreElements();) {
             String fieldName = params.nextElement();
             fields.put(fieldName, request.getParameter(fieldName));
         }
 
-        // 2. Kiểm tra chữ ký bảo mật (Sử dụng hàm verify của vnpayService)
-        boolean isValidSignature = vnpayService.verifyCallback(fields);
-
-        if (isValidSignature) {
-            String responseCode = fields.get("vnp_ResponseCode");
-            if ("00".equals(responseCode)) {
-                // THANH TOÁN THÀNH CÔNG
-                // Parse OrderInfo để lấy PackageId và ReaderId
-                // Chuỗi của ông là: "PAY_VIP_PKG_" + packageId + "_USER_" + readerId
+        if (vnpayService.verifyCallback(fields)) {
+            if ("00".equals(fields.get("vnp_ResponseCode"))) {
                 String orderInfo = fields.get("vnp_OrderInfo");
                 try {
+                    // Chuỗi: PAY_PACKAGE_1_READER_8
                     String[] parts = orderInfo.split("_");
-                    Integer packageId = Integer.parseInt(parts[3]);
-                    Long readerId = Long.parseLong(parts[5]);
+                    Integer packageId = Integer.parseInt(parts[2]); // index 2 là ID gói
+                    Long readerId = Long.parseLong(parts[4]);       // index 4 là ID người dùng
 
-                    // Gọi Service kích hoạt gói VIP cho Reader
                     subscriptionService.activateSubscriptionByReaderId(readerId, packageId);
 
-                    return ResponseEntity.ok(Map.of(
-                            "status", "00",
-                            "message", "Kích hoạt gói VIP thành công!"
-                    ));
+                    return ResponseEntity.ok(Map.of("status", "00", "message", "Kích hoạt thành công!"));
                 } catch (Exception e) {
-                    return ResponseEntity.status(500).body("Lỗi xử lý dữ liệu đơn hàng");
+                    return ResponseEntity.status(500).body("Lỗi parse đơn hàng: " + e.getMessage());
                 }
-            } else {
-                // Thanh toán thất bại hoặc người dùng hủy
-                return ResponseEntity.ok(Map.of(
-                        "status", responseCode,
-                        "message", "Thanh toán không thành công"
-                ));
             }
-        } else {
-            return ResponseEntity.badRequest().body("Chữ ký VNPay không hợp lệ!");
+            return ResponseEntity.ok(Map.of("status", "failed", "message", "Thanh toán thất bại"));
         }
+        return ResponseEntity.badRequest().body("Chữ ký không hợp lệ!");
     }
 }
