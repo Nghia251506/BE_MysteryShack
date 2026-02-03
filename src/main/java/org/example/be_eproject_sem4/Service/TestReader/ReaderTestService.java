@@ -10,6 +10,7 @@ import org.example.be_eproject_sem4.Repository.ReaderApplicationRepository;
 import org.example.be_eproject_sem4.Repository.ReaderTestAttemptRepository;
 import org.example.be_eproject_sem4.Repository.TestBankRepository;
 import org.example.be_eproject_sem4.Repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,9 +49,10 @@ public class ReaderTestService {
 
     // 2. Chấm điểm bài thi
     @Transactional
-    public TestResultDTO submitTest(Long userId, TestSubmitDTO submitDTO) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public TestResultDTO submitTest(TestSubmitDTO submitDTO) {
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentReader = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
 
         int correctCount = 0;
         List<TestSubmitDTO.AnswerDTO> answers = submitDTO.getAnswers();
@@ -71,7 +73,7 @@ public class ReaderTestService {
 
         // Lưu kết quả thi
         ReaderTestAttempt attempt = new ReaderTestAttempt();
-        attempt.setReader(user);
+        attempt.setReader(currentReader);
         attempt.setScore(score);
         attempt.setCorrectCount(correctCount);
         attempt.setTotalQuestions(total);
@@ -80,7 +82,7 @@ public class ReaderTestService {
 
         // Nếu ĐỖ, tự động tạo đơn đăng ký cho Admin
         if ("PASSED".equals(status)) {
-            createApplication(user, attempt);
+            createApplication(currentReader, attempt);
         }
 
         return new TestResultDTO(score, correctCount, total, status);

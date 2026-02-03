@@ -28,26 +28,7 @@ public class ReaderTestController {
     }
 
     @PostMapping("/submit")
-    public ResponseEntity<TestResultDTO> submit(
-            @RequestBody TestSubmitDTO submitDTO,
-            HttpServletRequest request // Lấy request để móc token
-    ) {
-        // 1. Lấy chuỗi "Bearer token..." từ header
-        String bearerToken = request.getHeader("Authorization");
-
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            // 2. Cắt bỏ 7 ký tự đầu ("Bearer ") để lấy token nguyên bản
-            String token = bearerToken.substring(7);
-
-            // 3. Truyền token vào hàm của ông
-            Long currentUserId = jwtTokenProvider.getUserIdFromToken(token);
-
-            if (currentUserId != null) {
-                return ResponseEntity.ok(testService.submitTest(currentUserId, submitDTO));
-            }
-        }
-
-        // Trả về 401 nếu không có token hoặc token lỏ
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ResponseEntity<TestResultDTO> submit(@RequestBody TestSubmitDTO submitDTO) {
+        return ResponseEntity.ok(testService.submitTest( submitDTO));
     }
 }
