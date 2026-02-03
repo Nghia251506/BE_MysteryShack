@@ -51,6 +51,7 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
+                        .requestMatchers("/api/payment/vnpay-callback").permitAll()
 
                         // 3. Tất cả các endpoint còn lại → phải đăng nhập + token hợp lệ
                         .anyRequest().permitAll()

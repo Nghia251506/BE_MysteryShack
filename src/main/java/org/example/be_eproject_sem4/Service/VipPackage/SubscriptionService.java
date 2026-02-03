@@ -48,7 +48,7 @@ public class SubscriptionService {
         sub.setReader(currentReader);
         sub.setVipPackage(pkg);
         sub.setStartDate(Instant.now());
-        sub.setEndDate(Instant.now().plusNanos(pkg.getDurationDays()));
+        sub.setEndDate(Instant.now().plus(pkg.getDurationDays(), java.time.temporal.ChronoUnit.DAYS));
         sub.setRemainingJobs(pkg.getMaxJobsPerDay()); // Tổng lượt của gói
         sub.setStatus(SubscriptionStatus.ACTIVE);
 
@@ -96,7 +96,7 @@ public class SubscriptionService {
         newSub.setReader(reader);
         newSub.setVipPackage(vipPackage);
         newSub.setStartDate(Instant.now());
-        newSub.setEndDate(Instant.now().plusNanos(vipPackage.getDurationDays()));
+        newSub.setEndDate(Instant.now().plus(vipPackage.getDurationDays(), java.time.temporal.ChronoUnit.DAYS));
         newSub.setStatus(SubscriptionStatus.ACTIVE);
 
         // Nạp tổng lượt nhận khách theo cấu hình gói
