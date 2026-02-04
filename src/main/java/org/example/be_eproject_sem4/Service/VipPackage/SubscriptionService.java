@@ -149,4 +149,27 @@ public class SubscriptionService {
 
                 System.out.println(">>> [VNPay] Kích hoạt & Lưu Payment thành công cho: " + reader.getUsername());
         }
+
+        public SubscriptionAdminResponse getCurrentSubscription() {
+                // 1. Lấy thông tin User đang login từ Security Context
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                User currentReader = userRepository.findByUsername(auth.getName())
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy reader"));
+
+                // 2. Tìm gói ACTIVE và còn hạn (EndDate > Now)
+                // Tôi giả định ông dùng DTO SubscriptionAdminResponse để trả về cho gọn,
+                // hoặc ông có thể tạo DTO riêng là SubscriptionResponse
+                return subscriptionRepository.findValidSubscription(currentReader.getId())
+                                .map(sub -> new SubscriptionAdminResponse(
+                                                sub.getId(),
+                                                sub.getReader().getUsername(),
+                                                sub.getReader().getFullName(),
+                                                sub.getVipPackage().getName(),
+                                                sub.getVipPackage().getPrice(),
+                                                sub.getStartDate(),
+                                                sub.getEndDate(),
+                                                sub.getRemainingJobs(),
+                                                sub.getStatus().toString()))
+                                .orElse(null); // Trả về null nếu chưa mua gói
+        }
 }
