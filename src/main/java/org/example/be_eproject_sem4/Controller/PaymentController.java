@@ -57,13 +57,13 @@ public class PaymentController {
                 .orElseThrow(() -> new RuntimeException("Gói VIP không hợp lệ!"));
 
         // 3. Tạo URL thanh toán VNPay
-        // Lưu ý: Tôi truyền thêm packageId và readerId vào OrderInfo để lát nữa Callback mình biết nạp cho ai
+        // Lưu ý: Tôi truyền thêm packageId và readerId vào OrderInfo để lát nữa
+        // Callback mình biết nạp cho ai
         String paymentUrl = vnpayService.createPaymentUrl(
                 request,
                 pkg.getPrice().longValue(),
                 packageId,
-                currentReader.getId()
-        );
+                currentReader.getId());
 
         // 4. Trả về URL cho FE để FE điều hướng Reader sang trang VNPay
         return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl));
@@ -83,10 +83,11 @@ public class PaymentController {
                 try {
                     // Chuỗi: PAY_PACKAGE_1_READER_8
                     String[] parts = orderInfo.split("_");
-                    Integer packageId = Integer.parseInt(parts[2]); // index 2 là ID gói
-                    Long readerId = Long.parseLong(parts[4]);       // index 4 là ID người dùng
+                    Integer packageId = Integer.parseInt(parts[2]); // index 2
+                    Long readerId = Long.parseLong(parts[4]); // index 4
 
-                    subscriptionService.activateSubscriptionByReaderId(readerId, packageId);
+                    // TRUYỀN THÊM fields VÀO ĐÂY ĐỂ LƯU PAYMENT
+                    subscriptionService.activateSubscriptionByReaderId(readerId, packageId, fields);
 
                     return ResponseEntity.ok(Map.of("status", "00", "message", "Kích hoạt thành công!"));
                 } catch (Exception e) {
