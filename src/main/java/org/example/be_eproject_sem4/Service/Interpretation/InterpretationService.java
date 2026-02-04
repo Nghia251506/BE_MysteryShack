@@ -45,8 +45,8 @@ public class InterpretationService {
         ReadingSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng (Session)"));
 
-        if (!"ACCEPTED".equals(session.getStatus())) {
-            throw new RuntimeException("Đơn hàng phải ở trạng thái ACCEPTED mới có thể nộp bài.");
+        if (!"PROCESSING".equals(session.getStatus())) {
+            throw new RuntimeException("Đơn hàng phải ở trạng thái PROCESSING mới có thể nộp bài.");
         }
 
         // 2. Tạo Form luận giải mới

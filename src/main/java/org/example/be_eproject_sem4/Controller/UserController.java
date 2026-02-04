@@ -92,4 +92,10 @@ public class UserController {
         User updated = userService.updateProfile(id,dto);
         return ResponseEntity.ok(updated);
     }
+
+    @GetMapping("/admin/getall")
+    public ResponseEntity<List<User>> getAllReader(){
+        List<User> users = userRepository.findAllReader();
+        return ResponseEntity.ok(users);
+    }
 }

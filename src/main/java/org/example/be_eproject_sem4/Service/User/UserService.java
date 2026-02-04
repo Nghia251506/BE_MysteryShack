@@ -7,6 +7,7 @@ import org.example.be_eproject_sem4.Mapper.UserMapper;
 import org.example.be_eproject_sem4.Repository.UserRepository;
 import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
@@ -130,6 +131,11 @@ public class UserService {
         // 3. Lưu thực thể đã cập nhật
         // Spring Data JPA sẽ tự động hiểu đây là lệnh update nhờ vào @Id
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public List<User> findAllReader(){
+        return userRepository.findAllReader();
     }
 
     @Transactional
