@@ -12,4 +12,6 @@ public class VipPackageDto {
     private Integer durationDays;
     private String benefits;
     private Integer maxJobsPerDay;
+    private String status = "ACTIVE"; 
+    private Integer soldCount;
 }

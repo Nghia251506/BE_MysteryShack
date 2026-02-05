@@ -10,22 +10,27 @@ import org.example.be_eproject_sem4.Dto.SelectedCardDto;
 import org.example.be_eproject_sem4.Entity.*;
 import org.example.be_eproject_sem4.Mapper.ReadingSessionMapper;
 import org.example.be_eproject_sem4.Repository.*;
+import org.example.be_eproject_sem4.Service.Admin.DashboardService;
 import org.example.be_eproject_sem4.Service.FCM.FCMService;
 import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
 import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
+import jakarta.persistence.criteria.Predicate;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,13 +70,39 @@ public class ReadingSessionService {
     @Autowired
     private NotificationManager notificationManager;
 
+    @Autowired
+    private DashboardService dashboardService;
+
     ReadingSessionService(PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
     }
 
     // 1. Lấy tất cả các phiên đọc
-    public List<ReadingSession> getAllSessions() {
-        return sessionRepository.findAll();
+    public Page<ReadingSession> getAllSessions(String tab, String keyword, Pageable pageable) {
+        return sessionRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 1. Lọc theo Tab (Trạng thái)
+            if ("live".equalsIgnoreCase(tab)) {
+                predicates.add(cb.equal(root.get("status"), "In Progress"));
+            } else if ("completed".equalsIgnoreCase(tab)) {
+                predicates.add(cb.equal(root.get("status"), "Completed"));
+            } else if ("dispute".equalsIgnoreCase(tab)) {
+                predicates.add(cb.equal(root.get("status"), "Disputed"));
+            }
+
+            // 2. Lọc theo Keyword (Search ID, tên Reader, tên Customer)
+            if (keyword != null && !keyword.isEmpty()) {
+                String likeKeyword = "%" + keyword.toLowerCase() + "%";
+                Predicate searchPredicate = cb.or(
+                        cb.like(cb.lower(root.get("id")), likeKeyword),
+                        cb.like(cb.lower(root.get("readerName")), likeKeyword),
+                        cb.like(cb.lower(root.get("customerName")), likeKeyword));
+                predicates.add(searchPredicate);
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        }, pageable);
     }
 
     // 2. Lấy chi tiết phiên đọc theo ID
@@ -210,8 +241,7 @@ public class ReadingSessionService {
     public ReadingSession getLatestProcessingSession(Long readerId) {
         // PageRequest.of(trang_so, kich_thuoc) -> lấy trang 0, chỉ 1 bản ghi
         List<ReadingSession> sessions = sessionRepository.findCurrentProcessingSession(
-                readerId, PageRequest.of(0, 1)
-        );
+                readerId, PageRequest.of(0, 1));
 
         return sessions.isEmpty() ? null : sessions.get(0);
     }
@@ -284,6 +314,8 @@ public class ReadingSessionService {
         assignReaderToSession(savedSession, dto.getReaderId());
         savedSession.setMatchedAt(Instant.now());
 
+        dashboardService.broadcastNewSession(savedSession);
+
         return savedSession;
     }
 
@@ -315,8 +347,9 @@ public class ReadingSessionService {
             System.out.println(">>> [MATCH SUCCESS] Assigned Reader: " + targetReader.getFullName());
 
             // --- GỬI THÔNG BÁO CHO READER ---
-            notificationManager.notifyReaderNewRequest(session.getReader().getId(), session.getId(),session.getFullName());
-            notificationManager.notifyReaderMatched(session.getCustomer().getId(),session.getReader().getFullName());
+            notificationManager.notifyReaderNewRequest(session.getReader().getId(), session.getId(),
+                    session.getFullName());
+            notificationManager.notifyReaderMatched(session.getCustomer().getId(), session.getReader().getFullName());
         } else {
             session.setStatus("PENDING");
             sessionRepository.save(session);

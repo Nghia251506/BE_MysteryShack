@@ -1,12 +1,17 @@
 package org.example.be_eproject_sem4.Service.User;
 
 import lombok.RequiredArgsConstructor;
+
+import org.example.be_eproject_sem4.Dto.Auth.UserDto;
 import org.example.be_eproject_sem4.Dto.Auth.UserUpdateDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Mapper.UserMapper;
 import org.example.be_eproject_sem4.Repository.UserRepository;
 import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +31,8 @@ public class UserService {
     private final UserMapper userMapper;
 
     private final NotificationManager notificationManager;
+
+    private final ModelMapper modelMapper;
 
     // Lấy ngẫu nhiên 1 trong những người giỏi nhất (Dùng cho khách vãng lai)
     public User getRandomTopReader() {
@@ -65,10 +72,12 @@ public class UserService {
             }
         }
 
-        if (matchedReader == null) matchedReader = readers.get(0);
+        if (matchedReader == null)
+            matchedReader = readers.get(0);
 
         // 4. Bắn Notification "vỗ vai" Reader ngay tại Service
-        if (readers.isEmpty()) return null;
+        if (readers.isEmpty())
+            return null;
 
         for (User r : readers) {
             countWeight += Math.pow(r.getEloScore() / 1000.0, 2);
@@ -78,7 +87,8 @@ public class UserService {
             }
         }
         // Backup nếu vòng lặp có vấn đề
-        if (matchedReader == null) matchedReader = readers.get(0);
+        if (matchedReader == null)
+            matchedReader = readers.get(0);
 
         // Bắn thông báo cho khách: "Đã tìm thấy người tương thích!"
         notificationManager.notifyReaderMatched(currentCustomerId, matchedReader.getFullName());
@@ -134,7 +144,7 @@ public class UserService {
     }
 
     @Transactional
-    public List<User> findAllReader(){
+    public List<User> findAllReader() {
         return userRepository.findAllReader();
     }
 
@@ -145,5 +155,32 @@ public class UserService {
         userMapper.updateUserFromDto(dto, user);
         User update = userRepository.save(user);
         return update;
+    }
+
+    
+    public Page<UserDto> getAllCustomers(String keyword, Pageable pageable) {
+        return userRepository.findAllCustomers(keyword, pageable)
+                .map(user -> modelMapper.map(user, UserDto.class));
+    }
+
+    
+    public UserDto getCustomerDetail(Long id) {
+        User user = userRepository.findByIdAndRole(id, User.Role.CUSTOMER)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng với ID: " + id));
+
+        // ModelMapper sẽ tự động map list ReadingSession sang ReadingSessionSimpleDto
+        // nếu ông đặt tên field chuẩn hoặc cấu hình mapping.
+        return modelMapper.map(user, UserDto.class);
+    }
+    @Transactional
+    public UserDto toggleCustomerStatus(Long id) {
+        User user = userRepository.findByIdAndRole(id, User.Role.CUSTOMER)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng!"));
+
+        // Đảo ngược trạng thái isActive
+        user.setActive(!user.isActive());
+        User updatedUser = userRepository.save(user);
+
+        return modelMapper.map(updatedUser, UserDto.class);
     }
 }

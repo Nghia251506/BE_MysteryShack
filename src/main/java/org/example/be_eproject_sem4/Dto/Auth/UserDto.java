@@ -30,4 +30,6 @@ public class UserDto {
     private String qrCode;
     private boolean isActive;
     private List<ReadingSessionSimpleDto> matchedSessions;
+    private boolean blocked;
+    private boolean busy;
 }

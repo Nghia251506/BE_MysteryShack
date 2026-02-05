@@ -14,6 +14,9 @@ import org.example.be_eproject_sem4.Security.JwtTokenProvider;
 import org.example.be_eproject_sem4.Service.Rating.RatingService;
 import org.example.be_eproject_sem4.Service.User.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -88,14 +91,42 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User>  updateUserProfile(@PathVariable Long id, @RequestBody UserUpdateDto dto){
-        User updated = userService.updateProfile(id,dto);
+    public ResponseEntity<User> updateUserProfile(@PathVariable Long id, @RequestBody UserUpdateDto dto) {
+        User updated = userService.updateProfile(id, dto);
         return ResponseEntity.ok(updated);
     }
 
     @GetMapping("/admin/getall")
-    public ResponseEntity<List<User>> getAllReader(){
+    public ResponseEntity<List<User>> getAllReader() {
         List<User> users = userRepository.findAllReader();
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<UserDto>> getAllCustomers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+
+        Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        PageRequest pageable = PageRequest.of(page, size, sort);
+
+        Page<UserDto> customers = userService.getAllCustomers(keyword, pageable);
+        return ResponseEntity.ok(customers);
+    }
+
+    // 2. Lấy chi tiết 1 khách hàng (Bao gồm cả lịch sử matchedSessions)
+    @GetMapping("/admin/{id}")
+    public ResponseEntity<UserDto> getCustomerById(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getCustomerDetail(id));
+    }
+
+    // 3. Khóa/Mở khóa tài khoản khách hàng
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<UserDto> toggleStatus(@PathVariable Long id) {
+        UserDto updatedUser = userService.toggleCustomerStatus(id);
+        return ResponseEntity.ok(updatedUser);
     }
 }

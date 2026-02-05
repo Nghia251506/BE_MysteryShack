@@ -3,11 +3,16 @@ package org.example.be_eproject_sem4.Controller;
 import org.example.be_eproject_sem4.Dto.ReadingSessionDTO;
 import org.example.be_eproject_sem4.Entity.ReadingSession;
 import org.example.be_eproject_sem4.Service.Request.ReadingSessionService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -22,8 +27,10 @@ public class ReadingSessionController {
 
     // 1. Lấy toàn bộ lịch sử các phiên đọc
     @GetMapping
-    public ResponseEntity<List<ReadingSession>> getAllSessions() {
-        return ResponseEntity.ok(sessionService.getAllSessions());
+    public ResponseEntity<Page<ReadingSession>> getAllSessions(
+            @RequestParam(required = false) String tab,
+            @ParameterObject Pageable pageable) { // Thêm cái này để Swagger hiện ô nhập chuẩn
+        return ResponseEntity.ok(sessionService.getAllSessions(tab, null, pageable));
     }
 
     // 2. Lấy chi tiết một phiên đọc theo ID
@@ -39,7 +46,8 @@ public class ReadingSessionController {
         return new ResponseEntity<>(createdSession, HttpStatus.CREATED);
     }
 
-    // 4. Cập nhật kết quả phiên đọc (Thường dùng sau khi đã chọn bài và có luận giải)
+    // 4. Cập nhật kết quả phiên đọc (Thường dùng sau khi đã chọn bài và có luận
+    // giải)
     @PutMapping("/{id}")
     public ResponseEntity<ReadingSession> updateSession(
             @PathVariable Long id,
@@ -72,11 +80,11 @@ public class ReadingSessionController {
         return ResponseEntity.ok(sessionService.getLatestProcessingSession(readerId));
     }
 
-//    @GetMapping("/customer")
-//    @PreAuthorize("hasRole('CUSTOMER')")
-//    public ResponseEntity<List> getReadingSessionsForCustomer() {
-//        return ResponseEntity.ok(sessionService.getMatchedSessionsForReader());
-//    }
+    // @GetMapping("/customer")
+    // @PreAuthorize("hasRole('CUSTOMER')")
+    // public ResponseEntity<List> getReadingSessionsForCustomer() {
+    // return ResponseEntity.ok(sessionService.getMatchedSessionsForReader());
+    // }
 
     // 7. Reader accept request
     @PostMapping("/{id}/accept")

@@ -37,4 +37,10 @@ public class VipPackage {
     // Gợi ý: Thêm trường này để sau này lọc Job
     @Column(name = "max_jobs_per_day")
     private Integer maxJobsPerDay;
+
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "Active"; // Mặc định là Active
+
+    @Column(name = "sold_count")
+    private Integer soldCount = 0;
 }

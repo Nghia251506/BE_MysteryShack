@@ -27,7 +27,7 @@ public class UserMapper {
                 .phone(request.getPhone())
                 .role(Role.CUSTOMER) // Mặc định là CUSTOMER khi đăng ký
                 .isVerified(false)   // Chưa verify
-                .eloScore(1000)      // Default ELO cho reader mới (nếu sau này upgrade)
+                .eloScore(500)      // Default ELO cho reader mới (nếu sau này upgrade)
                 .build();
     }
 
@@ -76,6 +76,8 @@ public class UserMapper {
         dto.setVerified(user.isVerified());
         dto.setActive(user.isActive());
         dto.setEloScore(user.getEloScore());
+        dto.setBlocked(user.getIsBlocked());
+        dto.setBusy(user.getIsBusy());
         return dto;
     }
 
