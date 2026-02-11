@@ -10,6 +10,7 @@ import org.example.be_eproject_sem4.Dto.SelectedCardDto;
 import org.example.be_eproject_sem4.Entity.*;
 import org.example.be_eproject_sem4.Mapper.ReadingSessionMapper;
 import org.example.be_eproject_sem4.Repository.*;
+import org.example.be_eproject_sem4.Service.MatchingService;
 import org.example.be_eproject_sem4.Service.Admin.DashboardService;
 import org.example.be_eproject_sem4.Service.FCM.FCMService;
 import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
@@ -72,6 +73,12 @@ public class ReadingSessionService {
 
     @Autowired
     private DashboardService dashboardService;
+
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
+
+    @Autowired
+    private MatchingService matchingService;
 
     ReadingSessionService(PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
@@ -183,6 +190,18 @@ public class ReadingSessionService {
         if (!"MATCHED".equals(session.getStatus())) {
             throw new RuntimeException("Session không ở trạng thái MATCHED");
         }
+
+        Subscription activeSub = subscriptionRepository.findValidSubscription(currentReader.getId())
+                .orElseThrow(() -> new RuntimeException("Bạn không có gói dịch vụ nào còn hiệu lực hoặc đã hết hạn."));
+        if (activeSub.getRemainingJobs() == null || activeSub.getRemainingJobs() <= 0) {
+            throw new RuntimeException("Gói của bạn đã hết lượt nhận khách trong tháng này");
+        }
+
+        activeSub.setRemainingJobs(activeSub.getRemainingJobs() - 1);
+        if (activeSub.getRemainingJobs() == 0) {
+            activeSub.setStatus(activeSub.getStatus().EXPIRED);
+        }
+        subscriptionRepository.save(activeSub);
 
         // 3. Cập nhật Session và Lịch sử
         session.setStatus("PROCESSING");
@@ -325,37 +344,63 @@ public class ReadingSessionService {
         Set<Long> excludeIds = session.getRejectedReaderIds();
         User targetReader = null;
 
-        // 1. Logic tìm Reader (giữ nguyên)
+        // 1. Nếu có chỉ định đích danh Reader
         if (chosenReaderId != null && !excludeIds.contains(chosenReaderId)) {
-            targetReader = userRepository.findById(chosenReaderId).orElse(null);
+            targetReader = userRepository.findById(chosenReaderId)
+                    .filter(this::isReaderEligible) // Phải còn lượt + rảnh
+                    .orElse(null);
         }
 
+        // 2. Nếu không có chỉ định hoặc ông được chọn không đủ điều kiện -> Tìm tự động
         if (targetReader == null) {
+            // Lấy list Reader đã verify, sắp xếp theo ELO
             List<User> readers = userRepository.findAllByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role.READER, true);
+
             targetReader = readers.stream()
-                    .filter(r -> !excludeIds.contains(r.getId()))
+                    .filter(r -> !excludeIds.contains(r.getId())) // Không nằm trong ds từ chối
+                    .filter(r -> !Boolean.TRUE.equals(r.getIsBusy())) // Phải đang RẢNH
+                    .filter(this::isReaderEligible) // QUAN TRỌNG: Phải còn Gói và còn Lượt
                     .findFirst()
                     .orElse(null);
         }
 
+        // 3. Xử lý kết quả
         if (targetReader != null) {
-            // 2. Cập nhật DB
+            // MATCH THÀNH CÔNG
             session.setReader(targetReader);
             session.setStatus("MATCHED");
             session.setMatchedAt(Instant.now());
             sessionRepository.save(session);
+
             System.out.println(">>> [MATCH SUCCESS] Assigned Reader: " + targetReader.getFullName());
 
-            // --- GỬI THÔNG BÁO CHO READER ---
-            notificationManager.notifyReaderNewRequest(session.getReader().getId(), session.getId(),
-                    session.getFullName());
-            notificationManager.notifyReaderMatched(session.getCustomer().getId(), session.getReader().getFullName());
+            notificationManager.notifyReaderNewRequest(targetReader.getId(), session.getId(), session.getFullName());
+            notificationManager.notifyReaderMatched(session.getCustomer().getId(), targetReader.getFullName());
         } else {
+            // MATCH THẤT BẠI -> ĐẨY VÀO REDIS CHỜ THỜI
             session.setStatus("PENDING");
             sessionRepository.save(session);
+
+            // Đẩy ID vào hàng chờ Redis
+            matchingService.pushToQueue(session.getId());
+
             notificationManager.notifyCustomerSearching(session.getCustomer().getId());
-            System.out.println(">>> [MATCH FAILED] Không có Reader khả dụng.");
+            System.out.println(">>> [MATCH FAILED] Chuyển Session #" + session.getId() + " vào Redis Queue.");
         }
+    }
+
+    /**
+     * Hàm check Reader "đủ tư cách" nhận khách
+     */
+    private boolean isReaderEligible(User reader) {
+        // 1. Check xem có đang bận không
+        if (Boolean.TRUE.equals(reader.getIsBusy()))
+            return false;
+
+        // 2. Check gói Subscription (Dùng Repo ae mình làm lúc nãy)
+        return subscriptionRepository.findValidSubscription(reader.getId())
+                .map(sub -> sub.getRemainingJobs() != null && sub.getRemainingJobs() > 0)
+                .orElse(false);
     }
 
     /**
@@ -406,6 +451,31 @@ public class ReadingSessionService {
                 history.setReader(reader);
             }
             historyRepository.save(history);
+        }
+    }
+
+    public void processQueueForReader(User availableReader) {
+        // Nếu ông này bận hoặc hết lượt thì nghỉ, khỏi móc Redis làm gì
+        if (!isReaderEligible(availableReader))
+            return;
+
+        // Lấy 1 thằng đang chờ trong Redis ra
+        Long sessionId = matchingService.popFromQueue();
+
+        if (sessionId != null) {
+            ReadingSession session = sessionRepository.findById(sessionId).orElse(null);
+
+            // Nếu session vẫn đang PENDING (chưa bị hủy)
+            if (session != null && "PENDING".equals(session.getStatus())) {
+                System.out.println(">>> [REDIS POP] Lấy Session #" + sessionId + " giao cho Reader: "
+                        + availableReader.getFullName());
+
+                // Gán luôn cho ông này
+                assignReaderToSession(session, availableReader.getId());
+            } else {
+                // Nếu session không hợp lệ, đệ quy tìm thằng tiếp theo trong hàng đợi
+                processQueueForReader(availableReader);
+            }
         }
     }
 }

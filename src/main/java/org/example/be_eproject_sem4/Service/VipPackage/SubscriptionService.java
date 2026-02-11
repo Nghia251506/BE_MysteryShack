@@ -2,6 +2,7 @@ package org.example.be_eproject_sem4.Service.VipPackage;
 
 import lombok.RequiredArgsConstructor;
 import org.example.be_eproject_sem4.Dto.VipPackage.SubscriptionAdminResponse;
+import org.example.be_eproject_sem4.Dto.VipPackage.SubscriptionResponse;
 import org.example.be_eproject_sem4.Entity.Payment;
 import org.example.be_eproject_sem4.Entity.PaymentStatus;
 import org.example.be_eproject_sem4.Entity.Subscription;
@@ -150,7 +151,7 @@ public class SubscriptionService {
                 System.out.println(">>> [VNPay] Kích hoạt & Lưu Payment thành công cho: " + reader.getUsername());
         }
 
-        public SubscriptionAdminResponse getCurrentSubscription() {
+        public SubscriptionResponse getCurrentSubscription() {
                 // 1. Lấy thông tin User đang login từ Security Context
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 User currentReader = userRepository.findByUsername(auth.getName())
@@ -160,11 +161,12 @@ public class SubscriptionService {
                 // Tôi giả định ông dùng DTO SubscriptionAdminResponse để trả về cho gọn,
                 // hoặc ông có thể tạo DTO riêng là SubscriptionResponse
                 return subscriptionRepository.findValidSubscription(currentReader.getId())
-                                .map(sub -> new SubscriptionAdminResponse(
+                                .map(sub -> new SubscriptionResponse(
                                                 sub.getId(),
                                                 sub.getReader().getUsername(),
                                                 sub.getReader().getFullName(),
                                                 sub.getVipPackage().getName(),
+                                                sub.getVipPackage(), 
                                                 sub.getVipPackage().getPrice(),
                                                 sub.getStartDate(),
                                                 sub.getEndDate(),

@@ -14,7 +14,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     // Tìm gói đang ACTIVE và CÒN HẠN của Reader
     @Query("SELECT s FROM Subscription s WHERE s.reader.id = :readerId " +
-            "AND s.status = 'ACTIVE' AND s.endDate >= CURRENT_DATE")
+       "AND s.status = org.example.be_eproject_sem4.Entity.SubscriptionStatus.ACTIVE " +
+       "AND s.endDate >= CURRENT_TIMESTAMP")
     Optional<Subscription> findValidSubscription(@Param("readerId") Long readerId);
 
     // Tìm lịch sử mua gói của 1 user

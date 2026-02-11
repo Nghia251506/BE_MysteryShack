@@ -15,7 +15,9 @@ import org.example.be_eproject_sem4.Service.EloService;
 import org.example.be_eproject_sem4.Service.FCM.FCMService;
 import org.example.be_eproject_sem4.Service.FCM.FcmTokenService;
 import org.example.be_eproject_sem4.Service.FCM.NotificationManager;
+import org.example.be_eproject_sem4.Service.Request.ReadingSessionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,11 +32,12 @@ public class InterpretationService {
     private final InterpretationMapper interpretationMapper;
     private final HistoryRepository historyRepository;
     private final FCMService fcmService;
-    private final FcmTokenService fcmTokenService;
     private final FcmTokenRepository fcmTokenRepository;
     private final NotificationManager notificationManager;
     private final EloService eloService;
     private final UserRepository userRepository;
+    @Lazy
+    private final ReadingSessionService sessionService;
 
     /**
      * Reader nộp bài luận giải cho 3 lá bài kèm lời khuyên và QR
@@ -127,10 +130,19 @@ public class InterpretationService {
 
         // A. Thông báo cho Reader (Xác nhận thành công)
         notificationManager.notifyReadingFinished(
-            session.getCustomer().getId(), 
-            sessionId, 
-            session.getReader().getFullName()
-        );
+                session.getCustomer().getId(),
+                sessionId,
+                session.getReader().getFullName());
+
+        try {
+            // Gọi sang ReadingSessionService để check queue
+            // Truyền chính ông reader vừa hoàn thành xong bài luận
+            sessionService.processQueueForReader(reader);
+        } catch (Exception e) {
+            // Dùng try-catch để nếu Redis có lỗi cũng không làm fail luồng nộp bài của
+            // Reader
+            System.err.println(">>> Lỗi khi khều khách từ Redis: " + e.getMessage());
+        }
 
         return interpretationMapper.toDto(savedForm);
     }
@@ -163,11 +175,12 @@ public class InterpretationService {
     /**
      * Lấy dữ liệu chi tiết từng bài luận cho Reader xem (View Detail)
      */
-    public InterpretationResponseDto getDetail(Long sessionId){
+    public InterpretationResponseDto getDetail(Long sessionId) {
         InterpretationForm form = formRepository.findByRequestIdId(sessionId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết luận giải này"));
         return interpretationMapper.toDto(form);
     }
+
     /**
      * Reader xác nhận đã nhận được tiền từ Khách
      */
@@ -195,9 +208,8 @@ public class InterpretationService {
         sessionRepository.save(session);
         Long customerId = session.getCustomer().getId();
         notificationManager.notifyCustomerPaymentConfirmed(
-            session.getCustomer().getId(), 
-            sessionId
-        );
+                session.getCustomer().getId(),
+                sessionId);
     }
 
     /**
@@ -227,8 +239,8 @@ public class InterpretationService {
         if (form.getRequestId().getReader() != null) {
             notificationManager.notifyReaderPaymentSent(
                     form.getRequestId().getReader().getId(),
-                sessionId, 
-                form.getRequestId().getFullName() // Gửi thêm tên để Reader biết ai trả
+                    sessionId,
+                    form.getRequestId().getFullName() // Gửi thêm tên để Reader biết ai trả
             );
         }
     }
