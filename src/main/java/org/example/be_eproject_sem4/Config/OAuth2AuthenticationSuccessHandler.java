@@ -53,7 +53,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         response.addCookie(cookie);
 
         // 4. Chuyển hướng về Frontend kèm theo các param để Redux xử lý
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/oauth2/redirect")
+        String targetUrl = UriComponentsBuilder.fromUriString("https://mystictarots.xyz/oauth2/redirect")
                 .queryParam("token", token)
                 .queryParam("fullName", user.getFullName())
                 .queryParam("email", user.getEmail())
