@@ -66,7 +66,7 @@ public class SecurityConfig {
                         .failureHandler((request, response, exception) -> {
                             // Nếu lỗi, đá về trang login của Frontend kèm thông báo lỗi
                             response.sendRedirect(
-                                    "http://localhost:3000/login?error=" + exception.getLocalizedMessage());
+                                    "https://mystictarots.xyz/login?error=" + exception.getLocalizedMessage());
                         }))
 
                 // Thêm JWT filter để kiểm tra token từ cookie

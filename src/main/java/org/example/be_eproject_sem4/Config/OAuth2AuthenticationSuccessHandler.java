@@ -34,7 +34,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
-            response.sendRedirect("http://localhost:3000/login?error=user_not_found");
+            response.sendRedirect("https://mystictarots.xyz/login?error=user_not_found");
             return;
         }
 
