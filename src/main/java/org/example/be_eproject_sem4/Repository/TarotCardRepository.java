@@ -3,6 +3,7 @@ package org.example.be_eproject_sem4.Repository;
 import org.example.be_eproject_sem4.Entity.Arcana;
 import org.example.be_eproject_sem4.Entity.TarotCard;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface TarotCardRepository extends JpaRepository<TarotCard, Long> {
+public interface TarotCardRepository extends JpaRepository<TarotCard, Long>, JpaSpecificationExecutor<TarotCard> {
 
     // Tìm theo số thứ tự (cardNumber) - dùng khi rút bài random
     Optional<TarotCard> findByCardNumber(Integer cardNumber);

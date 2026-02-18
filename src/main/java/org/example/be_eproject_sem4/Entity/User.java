@@ -93,4 +93,15 @@ public class User {
     public boolean isCustomer() {
         return this.role == Role.CUSTOMER;
     }
+
+    @Column(name = "status_confirm", length = 20)
+    private String statusConfirm = "PENDING_VERIFICATION";
+
+    private boolean setEmailVerified;
+
+    @Column(name = "verification_token", length = 255)
+    private String verificationToken;
+
+    @Column(name = "verification_token_expiry")
+    private LocalDateTime verificationTokenExpiry;
 }

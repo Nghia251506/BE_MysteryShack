@@ -15,7 +15,7 @@ import java.util.List;
 public interface TarotCardService {
 
     // Lấy tất cả lá bài (có phân trang cho admin)
-    Page<TarotCardResponseDto> getAllCards(Pageable pageable);
+    Page<TarotCardResponseDto> getAllCards(Pageable pageable, String arcana, String suit);
 
     // Lấy tất cả lá bài active (dùng cho user rút bài)
     List<TarotCardResponseDto> getAllActiveCards();

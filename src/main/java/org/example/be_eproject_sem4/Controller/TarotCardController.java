@@ -40,13 +40,18 @@ public class TarotCardController {
     public ResponseEntity<Map<String, Object>> getAllCardsAdmin(
             @Parameter(description = "Trang (bắt đầu từ 0)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Số lượng mỗi trang") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sắp xếp theo field (ví dụ: cardNumber,asc)") @RequestParam(defaultValue = "cardNumber,asc") String sort) {
+            @Parameter(description = "Sắp xếp theo field (ví dụ: cardNumber,asc)") 
+            @RequestParam(defaultValue = "cardNumber,asc") String sort,
+            @RequestParam(required = false) String arcana, // Thêm lọc Arcana
+            @RequestParam(required = false) String suit
+        ) 
+        {
 
         String[] sortParams = sort.split(",");
         Sort.Direction direction = Sort.Direction.fromString(sortParams.length > 1 ? sortParams[1] : "asc");
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortParams[0]));
 
-        Page<TarotCardResponseDto> cardPage = tarotCardService.getAllCards(pageable);
+        Page<TarotCardResponseDto> cardPage = tarotCardService.getAllCards(pageable, arcana, suit);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

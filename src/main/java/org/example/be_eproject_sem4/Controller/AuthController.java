@@ -3,10 +3,19 @@ package org.example.be_eproject_sem4.Controller;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.example.be_eproject_sem4.Dto.Auth.*;
+import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Service.Auth.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletResponse; // Import cái này nhé ông giáo
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -14,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final org.example.be_eproject_sem4.Repository.UserRepository userRepository;
+    private final org.example.be_eproject_sem4.Service.Mail.EmailService emailService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDto> register(@Valid @RequestBody RegisterRequestDto dto) {
@@ -31,5 +42,74 @@ public class AuthController {
     public ResponseEntity<String> logout(HttpServletResponse response) {
         authService.logout(response);
         return ResponseEntity.ok("Đăng xuất thành công");
+    }
+
+    @GetMapping("/public/verify")
+    public void verifyUser(
+            @RequestParam String token,
+            @RequestParam Long userId,
+            HttpServletResponse response) throws IOException { // Thêm response vào đây
+
+        // 1. Tìm User
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            response.sendRedirect("https://mystictarots.xyz/verify-result?status=invalid");
+            return;
+        }
+
+        // 2. Nếu đã verify rồi
+        if (user.isVerified()) {
+            response.sendRedirect("https://mystictarots.xyz/verify-result?status=success");
+            return;
+        }
+
+        // 3. Kiểm tra Token
+        if (user.getVerificationToken() == null || !user.getVerificationToken().equals(token)) {
+            response.sendRedirect("https://mystictarots.xyz/verify-result?status=invalid");
+            return;
+        }
+
+        // 4. Kiểm tra hết hạn (Expiry)
+        if (user.getVerificationTokenExpiry() != null &&
+                user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            response.sendRedirect("https://mystictarots.xyz/verify-result?status=expired&email=" + user.getEmail());
+            return;
+        }
+
+        // 5. Kích hoạt tài khoản
+        user.setVerified(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+
+        if (user.getRole() != null && user.getRole().equals("READER")) {
+            user.setActive(false);
+        } else {
+            user.setActive(true);
+        }
+
+        userRepository.save(user);
+
+        // Thành công rực rỡ thì bay về đây
+        response.sendRedirect("https://mystictarots.xyz/verify-result?status=success");
+    }
+
+    @PostMapping("/public/resend-verify")
+    public ResponseEntity<?> resendVerification(@RequestParam String email) {
+        User user = (User) userRepository.findByEmail(email);
+
+        if (user.isVerified()) {
+            return ResponseEntity.badRequest().body("Tài khoản này đã được xác thực rồi.");
+        }
+
+        // Tạo token mới & expiry mới (24h)
+        String newToken = UUID.randomUUID().toString();
+        user.setVerificationToken(newToken);
+        user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+
+        // Gửi mail mới
+        emailService.sendVerificationEmail(user.getEmail(), newToken, user.getId());
+
+        return ResponseEntity.ok("Mã xác thực mới đã được gửi vào email của bạn.");
     }
 }

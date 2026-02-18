@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.example.be_eproject_sem4.Dto.ReadingSessionSimpleDto;
 import org.example.be_eproject_sem4.Dto.Auth.AuthResponseDto;
@@ -22,6 +23,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.util.UUID;
+import java.time.LocalDateTime;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,18 +39,21 @@ public class AuthService {
         private final AuthenticationManager authenticationManager;
         private final ReadingSessionRepository sessionRepository;
         private final ReadingSessionMapper readingSessionMapper;
+        private final org.example.be_eproject_sem4.Service.Mail.EmailService emailService;
 
         public AuthService(UserRepository userRepository,
                         PasswordEncoder passwordEncoder,
                         JwtTokenProvider jwtTokenProvider,
                         ReadingSessionRepository sessionRepository,
                         ReadingSessionMapper readingSessionMapper,
-                        @org.springframework.context.annotation.Lazy AuthenticationManager authenticationManager) { 
+                        @org.springframework.context.annotation.Lazy AuthenticationManager authenticationManager,
+                        org.example.be_eproject_sem4.Service.Mail.EmailService emailService) {
                 this.userRepository = userRepository;
                 this.passwordEncoder = passwordEncoder;
                 this.jwtTokenProvider = jwtTokenProvider;
                 this.sessionRepository = sessionRepository;
                 this.authenticationManager = authenticationManager;
+                this.emailService = emailService;
                 this.readingSessionMapper = readingSessionMapper;
         }
 
@@ -56,17 +62,15 @@ public class AuthService {
                         throw new RuntimeException("Username đã tồn tại");
                 }
 
-                User.Role userRole = User.Role.CUSTOMER; // Mặc định
+                // 1. Tạo verification token
+                String verificationToken = UUID.randomUUID().toString();
+
+                User.Role userRole = User.Role.CUSTOMER;
                 if (dto.getRole() != null && dto.getRole().equalsIgnoreCase("READER")) {
                         userRole = User.Role.READER;
-                        // Nếu muốn giới hạn: chỉ admin mới set được role READER
-                        // Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                        // if (auth == null || !auth.getAuthorities().contains(new
-                        // SimpleGrantedAuthority("ROLE_ADMIN"))) {
-                        // throw new RuntimeException("Chỉ admin mới đăng ký được reader");
-                        // }
                 }
 
+                // 2. Build User với thông tin verify
                 User user = User.builder()
                                 .username(dto.getUsername())
                                 .email(dto.getEmail())
@@ -75,12 +79,25 @@ public class AuthService {
                                 .birthDate(dto.getBirthDate())
                                 .phone(dto.getPhone())
                                 .role(userRole)
-                                .isVerified(false) // Reader cần verify sau
+                                .isVerified(false) // Mặc định là false
+                                .verificationToken(verificationToken)
+                                .verificationTokenExpiry(LocalDateTime.now().plusHours(24)) // Hết hạn sau 24h
                                 .eloScore(500)
                                 .build();
 
                 user = userRepository.save(user);
 
+                // 3. Gửi Mail xác thực (Nên dùng @Async trong EmailService để không làm chậm
+                // response)
+                try {
+                        emailService.sendVerificationEmail(user.getEmail(), verificationToken, user.getId());
+                } catch (Exception e) {
+                        // Log lỗi gửi mail nhưng vẫn cho User đăng ký, hoặc xử lý tùy ông
+                        System.err.println("Lỗi gửi mail: " + e.getMessage());
+                }
+
+                // 4. Trả về thông báo (Ở đây tôi vẫn trả JWT, nhưng ông nên check isVerified ở
+                // filter/login)
                 String token = jwtTokenProvider.generateToken(user);
 
                 return AuthResponseDto.builder()
@@ -90,17 +107,15 @@ public class AuthService {
                                                 .username(user.getUsername())
                                                 .email(user.getEmail())
                                                 .fullName(user.getFullName())
-                                                .phone(user.getPhone())
-                                                .birthDate(user.getBirthDate())
                                                 .role(user.getRole().name())
                                                 .isVerified(user.isVerified())
-                                                .eloScore(user.getEloScore())
                                                 .build())
                                 .build();
         }
+
         @Transactional
         public AuthResponseDto login(LoginRequest dto, HttpServletResponse response) {
-                // 1. Xác thực người dùng
+                // 1. Xác thực người dùng (Kiểm tra username/password trước)
                 Authentication authentication = authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword()));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -108,7 +123,13 @@ public class AuthService {
                 User user = userRepository.findByUsername(dto.getUsername())
                                 .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
 
-                // 2. Tạo JWT Token
+                // --- ĐOẠN CHECK QUAN TRỌNG NHẤT Ở ĐÂY ---
+                if (!user.isVerified()) {
+                        throw new RuntimeException("Tài khoản chưa được xác thực. Vui lòng kiểm tra email của bạn!");
+                }
+                // ---------------------------------------
+
+                // 2. Tạo JWT Token (Chỉ khi đã verify mới đi tiếp đến đây)
                 String token = jwtTokenProvider.generateToken(user);
 
                 // 3. TẠO VÀ CẤU HÌNH COOKIE
@@ -121,14 +142,10 @@ public class AuthService {
                 cookie.setAttribute("Partitioned", "");
                 response.addCookie(cookie);
 
-                // 4. XỬ LÝ LOGIC READER (Đã sửa lỗi ép kiểu tại đây)
+                // 4. XỬ LÝ LOGIC READER
                 List<ReadingSessionSimpleDto> matchedSessionsList = new ArrayList<>();
-
                 if (user.getRole().equals(User.Role.READER)) {
-                        // Lấy danh sách Entity (Đảm bảo Repository trả về List<ReadingSession>)
                         List<ReadingSession> sessions = sessionRepository.findByReaderAndStatus(user, "MATCHED");
-
-                        // Sử dụng MapStruct để chuyển đổi sạch sẽ
                         matchedSessionsList = readingSessionMapper.toSimpleDtoList(sessions);
                 }
 
@@ -146,7 +163,6 @@ public class AuthService {
                                                 .role(user.getRole().name())
                                                 .isVerified(user.isVerified())
                                                 .eloScore(user.getEloScore())
-                                                // TRUYỀN ĐÚNG BIẾN matchedSessionsList VÀO ĐÂY
                                                 .matchedSessions(matchedSessionsList)
                                                 .build())
                                 .build();
@@ -173,5 +189,24 @@ public class AuthService {
 
                 // Gửi cookie về client để thực hiện xóa
                 response.addCookie(cookie);
+        }
+
+        @Transactional
+        public void resendVerificationEmail(String email) {
+                User user = ((Optional<User>) userRepository.findByEmail(email))
+                                .orElseThrow(() -> new RuntimeException("Email không tồn tại trong hệ thống"));
+
+                if (user.isVerified()) {
+                        throw new RuntimeException("Tài khoản này đã được xác thực rồi!");
+                }
+
+                // Tạo token mới, reset lại 24h mới
+                String newToken = UUID.randomUUID().toString();
+                user.setVerificationToken(newToken);
+                user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+                userRepository.save(user);
+
+                // Gửi lại mail
+                emailService.sendVerificationEmail(user.getEmail(), newToken, user.getId());
         }
 }

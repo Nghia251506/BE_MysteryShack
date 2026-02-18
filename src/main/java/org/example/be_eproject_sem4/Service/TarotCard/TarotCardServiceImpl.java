@@ -16,6 +16,7 @@ import org.example.be_eproject_sem4.Repository.TarotCardRepository;
 import org.example.be_eproject_sem4.Service.AI.AiInterpretationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
 
 @Service
 @RequiredArgsConstructor
@@ -35,8 +38,26 @@ public class TarotCardServiceImpl implements TarotCardService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TarotCardResponseDto> getAllCards(Pageable pageable) {
-        return tarotCardRepo.findAll(pageable)
+    public Page<TarotCardResponseDto> getAllCards(Pageable pageable, String arcana, String suit) {
+        // Tạo Specification động
+        Specification<TarotCard> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Nếu có lọc theo Arcana (MAJOR/MINOR)
+            if (arcana != null && !arcana.trim().isEmpty()) {
+                predicates.add(cb.equal(root.get("arcana"), arcana));
+            }
+
+            // Nếu có lọc theo Suit (WANDS/CUPS/...)
+            if (suit != null && !suit.trim().isEmpty()) {
+                predicates.add(cb.equal(root.get("suit"), suit));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        // Gọi findAll với spec và pageable
+        return tarotCardRepo.findAll(spec, pageable)
                 .map(TarotCardMapper::toResponseDto);
     }
 
