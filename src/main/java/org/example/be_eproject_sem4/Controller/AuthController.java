@@ -95,10 +95,10 @@ public class AuthController {
 
     @PostMapping("/public/resend-verify")
     public ResponseEntity<?> resendVerification(@RequestParam String email) {
-        User user = (User) userRepository.findByEmail(email);
+        User user = userRepository.findByEmail(email).orElse(null);
 
-        if (user.isVerified()) {
-            return ResponseEntity.badRequest().body("Tài khoản này đã được xác thực rồi.");
+        if (user == null) {
+            return ResponseEntity.badRequest().body("Email không tồn tại.");
         }
 
         // Tạo token mới & expiry mới (24h)

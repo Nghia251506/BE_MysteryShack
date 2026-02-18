@@ -30,4 +30,14 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
             "AND r.replyComment IS NOT NULL AND r.replyComment != '' " +
             "ORDER BY r.createdAt DESC")
     List<Rating> findByReaderIdAndRatingValueWithComments(Long readerId, Integer stars);
+
+    // Lấy 5 đánh giá mới nhất của 1 reader
+    List<Rating> findTop5ByReaderIdOrderByCreatedAtDesc(Long readerId);
+
+    // Tính trung bình cộng số sao của 1 reader
+    @Query("SELECT AVG(r.ratingValue) FROM Rating r WHERE r.reader.id = :readerId")
+    Double getAverageRatingByReaderId(Long readerId);
+
+    // Đếm tổng số lượt đánh giá
+    long countByReaderId(Long readerId);
 }

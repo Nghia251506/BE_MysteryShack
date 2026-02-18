@@ -24,7 +24,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
         List<User> findAllByRoleAndIsVerifiedOrderByEloScoreDesc(User.Role role, boolean isVerified);
 
-        Object findByEmail(String email);
+        Optional<User> findByEmail(String email);
 
         List<User> findTop10ByRoleOrderByEloScoreDesc(User.Role role);
 

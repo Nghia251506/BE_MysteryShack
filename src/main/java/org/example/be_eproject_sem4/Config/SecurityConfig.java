@@ -1,6 +1,8 @@
 package org.example.be_eproject_sem4.Config;
 
 import lombok.RequiredArgsConstructor;
+
+import org.example.be_eproject_sem4.Service.OAuth2.CustomOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -25,10 +27,12 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                           JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+            JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -36,11 +40,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 1. Public endpoints - ai cũng truy cập được (không cần token)
                         .requestMatchers(
-                                "/api/auth/register",           // Đăng ký
-                                "/api/auth/login",              // Đăng nhập
-                                "/api/auth/logout",             // Logout (nếu có)
-                                "/api/zodiac/guest/**",         // Guest xem cung hoàng đạo (giới hạn 2 lần)
-                                "/api/tarot/guest/**"           // Guest xem tarot (giới hạn 2 lần)
+                                "/api/auth/register", // Đăng ký
+                                "/api/auth/login", // Đăng nhập
+                                "/api/auth/logout", // Logout (nếu có)
+                                "/api/zodiac/guest/**", // Guest xem cung hoàng đạo (giới hạn 2 lần)
+                                "/api/tarot/guest/**" // Guest xem tarot (giới hạn 2 lần)
                         ).permitAll()
 
                         // 2. Swagger UI + OpenAPI docs - phải public hoàn toàn
@@ -49,13 +53,21 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
-                                "/webjars/**"
-                        ).permitAll()
+                                "/webjars/**")
+                        .permitAll()
                         .requestMatchers("/api/payment/vnpay-callback").permitAll()
 
                         // 3. Tất cả các endpoint còn lại → phải đăng nhập + token hợp lệ
-                        .anyRequest().permitAll()
-                )
+                        .anyRequest().permitAll())
+
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler((request, response, exception) -> {
+                            // Nếu lỗi, đá về trang login của Frontend kèm thông báo lỗi
+                            response.sendRedirect(
+                                    "http://localhost:3000/login?error=" + exception.getLocalizedMessage());
+                        }))
 
                 // Thêm JWT filter để kiểm tra token từ cookie
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -65,9 +77,9 @@ public class SecurityConfig {
                         .authenticationEntryPoint((req, res, authEx) -> {
                             res.setStatus(HttpStatus.UNAUTHORIZED.value());
                             res.setContentType("application/json");
-                            res.getWriter().write("{\"success\": false, \"message\": \"Bạn cần đăng nhập để truy cập!\"}");
-                        })
-                );
+                            res.getWriter()
+                                    .write("{\"success\": false, \"message\": \"Bạn cần đăng nhập để truy cập!\"}");
+                        }));
 
         return http.build();
     }
@@ -85,7 +97,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:3000", "http://localhost:5173", "https://mystictarots.xyz", "https://admin.mystictarots.xyz")); // React, Vue...
+        config.setAllowedOriginPatterns(List.of("http://localhost:3000", "http://localhost:5173",
+                "https://mystictarots.xyz", "https://admin.mystictarots.xyz")); // React, Vue...
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true); // quan trọng để cookie được gửi
