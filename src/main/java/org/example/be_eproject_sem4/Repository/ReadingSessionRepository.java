@@ -84,4 +84,7 @@ public interface ReadingSessionRepository extends JpaRepository<ReadingSession, 
             + "WHERE s.reader = :reader "
             + "GROUP BY s.status")
     List<Object[]> countSessionsByStatus(@Param("reader") User reader);
+
+    @Query("SELECT COUNT(s) FROM ReadingSession s WHERE s.reader.id = :readerId AND s.status = :status")
+    Integer countByReaderIdAndStatus(@Param("readerId") Long readerId, @Param("status") String status);
 }

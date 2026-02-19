@@ -1,16 +1,17 @@
 package org.example.be_eproject_sem4.Service.FCM;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.example.be_eproject_sem4.Entity.FcmToken;
-import org.example.be_eproject_sem4.Repository.FcmTokenRepository;
-import org.example.be_eproject_sem4.Repository.UserRepository;
-import org.example.be_eproject_sem4.Security.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.example.be_eproject_sem4.Entity.FcmToken;
+import org.example.be_eproject_sem4.Repository.FcmTokenRepository;
+import org.example.be_eproject_sem4.Repository.UserRepository;
+import org.example.be_eproject_sem4.Security.JwtTokenProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class NotificationManager {
@@ -158,6 +159,72 @@ public class NotificationManager {
             data.put("message", "Bạn nhận được " + ratingValue + " sao từ " + cName);
             data.put("sound", "success_ding.mp3");
             sendDataToUser(readerId, data);
+        });
+    }
+
+    // 10. Gửi thông báo CHUNG (Dùng cho Tab "Gửi thông báo" ở Admin)
+    public void notifyBroadcast(Long userId, String title, String content, String type, String link, String btnText) {
+        userRepository.findById(userId).ifPresent(user -> {
+            Map<String, String> data = new HashMap<>();
+            data.put("type", type != null ? type : "GENERAL_SYSTEM");
+            data.put("title", title);
+            data.put("message", content);
+            if (link != null) data.put("link", link);
+            if (btnText != null) data.put("btnText", btnText);
+            data.put("sound", "notification.mp3");
+            
+            sendDataToUser(userId, data);
+        });
+    }
+
+    // 11. Thông báo KHUYẾN MÃI (Promotion)
+    public void notifyPromotion(Long userId, String title, String content, String promoCode) {
+        userRepository.findById(userId).ifPresent(user -> {
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "PROMOTION");
+            data.put("title", title);
+            data.put("message", content);
+            if (promoCode != null) data.put("promoCode", promoCode);
+            data.put("sound", "success_ding.mp3");
+            
+            sendDataToUser(userId, data);
+        });
+    }
+
+    // 12. Thông báo KỶ LUẬT/BLOCK (Bắn phát cuối trước khi bị logout hoặc bị chặn)
+    public void notifyAccountBlocked(Long userId, String reason) {
+        userRepository.findById(userId).ifPresent(user -> {
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "ACCOUNT_BLOCKED");
+            data.put("title", "Thông báo tài khoản");
+            data.put("message", "Tài khoản của bạn đã bị khóa. Lý do: " + (reason != null ? reason : "Vi phạm tiêu chuẩn cộng đồng."));
+            data.put("action", "FORCE_LOGOUT"); // FE có thể dùng cái này để đá user ra
+            data.put("sound", "warning.mp3");
+            
+            sendDataToUser(userId, data);
+        });
+    }
+
+    // 13. Cập nhật BẢO TRÌ (Maintenance)
+    public void notifyMaintenance(Long userId, String startTime, String duration) {
+        userRepository.findById(userId).ifPresent(user -> {
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "MAINTENANCE");
+            data.put("title", "Hệ thống bảo trì");
+            data.put("message", "Hệ thống sẽ bảo trì từ " + startTime + " trong khoảng " + duration + ". Vui lòng quay lại sau.");
+            data.put("sound", "notification.mp3");
+            
+            sendDataToUser(userId, data);
+        });
+    }
+
+    // Helper cho việc gửi toàn hệ thống (Broadcast All)
+    // Method này Admin dùng để loop gửi cho tất cả user
+    public void sendToAllUsers(String title, String content, String type, String link, String btnText) {
+        userRepository.findAll().forEach(user -> {
+            if (user.isActive()) {
+                notifyBroadcast(user.getId(), title, content, type, link, btnText);
+            }
         });
     }
 

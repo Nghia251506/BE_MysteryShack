@@ -1,13 +1,13 @@
 package org.example.be_eproject_sem4.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.example.be_eproject_sem4.Entity.Subscription;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
@@ -22,4 +22,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findByReaderIdOrderByCreatedAtDesc(Long readerId);
     // Lấy tất cả, cái nào mới mua thì hiện lên trên
     List<Subscription> findAllByOrderByCreatedAtDesc();
+
+    @Query("SELECT COALESCE(SUM(sub.remainingJobs), 0) FROM Subscription sub WHERE sub.reader.id = :readerId")
+    Integer sumRemainingJobsByReaderId(@Param("readerId") Long readerId);
 }

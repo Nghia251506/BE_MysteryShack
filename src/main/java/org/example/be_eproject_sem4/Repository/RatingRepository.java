@@ -2,11 +2,12 @@ package org.example.be_eproject_sem4.Repository;
 
 import java.util.List;
 
-import org.example.be_eproject_sem4.Dto.RatingResponse;
 import org.example.be_eproject_sem4.Entity.Rating;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import io.lettuce.core.dynamic.annotation.Param;
 
 @Repository
 public interface RatingRepository extends JpaRepository<Rating, Long> {
@@ -25,10 +26,10 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
     boolean existsByRequestId(Long requestId);
 
     // Hàm ông đang thiếu đây:
-    @Query("SELECT r FROM Rating r WHERE r.reader.id = :readerId " +
-            "AND r.ratingValue = :stars " +
-            "AND r.replyComment IS NOT NULL AND r.replyComment != '' " +
-            "ORDER BY r.createdAt DESC")
+    @Query("SELECT r FROM Rating r WHERE r.reader.id = :readerId "
+            + "AND r.ratingValue = :stars "
+            + "AND r.replyComment IS NOT NULL AND r.replyComment != '' "
+            + "ORDER BY r.createdAt DESC")
     List<Rating> findByReaderIdAndRatingValueWithComments(Long readerId, Integer stars);
 
     // Lấy 5 đánh giá mới nhất của 1 reader
@@ -40,4 +41,7 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     // Đếm tổng số lượt đánh giá
     long countByReaderId(Long readerId);
+
+    @Query("SELECT COALESCE(AVG(r.ratingValue), 0.0) FROM Rating r WHERE r.reader.id = :readerId")
+    Double calculateAvgRatingByReaderId(@Param("readerId") Long readerId);
 }

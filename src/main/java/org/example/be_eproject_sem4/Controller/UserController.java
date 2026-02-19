@@ -3,12 +3,14 @@ package org.example.be_eproject_sem4.Controller;
 import java.util.List;
 import java.util.Map;
 
+import org.example.be_eproject_sem4.Dto.Admin.ReaderManagerResponse;
 import org.example.be_eproject_sem4.Dto.Auth.ProfileUpdate;
 import org.example.be_eproject_sem4.Dto.Auth.UpdateProfileRequest;
 import org.example.be_eproject_sem4.Dto.Auth.UserDto;
 import org.example.be_eproject_sem4.Dto.Auth.UserUpdateDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Service.Rating.RatingService;
+import org.example.be_eproject_sem4.Service.ReaderService;
 import org.example.be_eproject_sem4.Service.User.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -39,6 +41,8 @@ public class UserController {
     private RatingService jwtTokenProvider;
     @Autowired
     private org.example.be_eproject_sem4.Repository.UserRepository userRepository;
+    @Autowired
+    private ReaderService readerService;
 
     /**
      * Lấy Reader ngẫu nhiên từ Top Elo. Hỗ trợ query parameter 'excludeId' để
@@ -102,9 +106,10 @@ public class UserController {
     }
 
     @GetMapping("/admin/getall")
-    public ResponseEntity<List<User>> getAllReader() {
-        List<User> users = userRepository.findAllReader();
-        return ResponseEntity.ok(users);
+    public ResponseEntity<List<ReaderManagerResponse>> getAllReader() {
+        // Gọi sang Service để lấy danh sách đã được "xào nấu" đủ data
+        List<ReaderManagerResponse> readers = readerService.getAllReadersWithStats();
+        return ResponseEntity.ok(readers);
     }
 
     @GetMapping
