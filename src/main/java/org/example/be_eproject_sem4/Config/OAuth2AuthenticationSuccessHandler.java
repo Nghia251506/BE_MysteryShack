@@ -1,9 +1,6 @@
 package org.example.be_eproject_sem4.Config;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import java.io.IOException;
 
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Security.JwtTokenProvider;
@@ -12,15 +9,18 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.IOException;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final JwtTokenProvider jwtUtils; // Giả sử ông có class này để tạo token
+    private final JwtTokenProvider jwtUtils;
     private final org.example.be_eproject_sem4.Repository.UserRepository userRepository; // Repo để tìm User sau khi
-                                                                                         // login bằng Google
+    // login bằng Google
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -32,6 +32,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         String email = oAuth2User.getAttribute("email");
         User user = userRepository.findByEmail(email).orElse(null);
+        if (email == null) {
+            email = oAuth2User.getAttribute("id") + "@facebook.com";
+        }
 
         if (user == null) {
             response.sendRedirect("https://mystictarots.xyz/login?error=user_not_found");
@@ -45,7 +48,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("access_token", token);
         cookie.setHttpOnly(true);
         cookie.setSecure(true); // Nếu chạy localhost không có https thì tạm set false, nhưng BE ông đang để
-                                // true nên tôi để true
+        // true nên tôi để true
         cookie.setPath("/");
         cookie.setMaxAge(7 * 24 * 60 * 60);
         cookie.setAttribute("SameSite", "None");
@@ -59,6 +62,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 .queryParam("email", user.getEmail())
                 .queryParam("role", user.getRole().name()) // Thêm .name() để tránh lỗi parse enum
                 .queryParam("id", user.getId())
+                .queryParam("birthDate", user.getBirthDate())
                 .encode()
                 .build().toUriString();
 

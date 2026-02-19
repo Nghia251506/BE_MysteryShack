@@ -1,16 +1,13 @@
 package org.example.be_eproject_sem4.Controller;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.servlet.http.HttpServletRequest;
+import org.example.be_eproject_sem4.Dto.Auth.ProfileUpdate;
 import org.example.be_eproject_sem4.Dto.Auth.UpdateProfileRequest;
 import org.example.be_eproject_sem4.Dto.Auth.UserDto;
 import org.example.be_eproject_sem4.Dto.Auth.UserUpdateDto;
 import org.example.be_eproject_sem4.Entity.User;
-import org.example.be_eproject_sem4.Security.JwtTokenProvider;
 import org.example.be_eproject_sem4.Service.Rating.RatingService;
 import org.example.be_eproject_sem4.Service.User.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +16,18 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
@@ -35,10 +41,9 @@ public class UserController {
     private org.example.be_eproject_sem4.Repository.UserRepository userRepository;
 
     /**
-     * Lấy Reader ngẫu nhiên từ Top Elo.
-     * Hỗ trợ query parameter 'excludeId' để khi nhấn "Đổi Reader" trên FE không bị
-     * trùng người cũ.
-     * Ví dụ: /api/users/readers/random-top?excludeId=8
+     * Lấy Reader ngẫu nhiên từ Top Elo. Hỗ trợ query parameter 'excludeId' để
+     * khi nhấn "Đổi Reader" trên FE không bị trùng người cũ. Ví dụ:
+     * /api/users/readers/random-top?excludeId=8
      */
     @GetMapping("/readers/random-top")
     public ResponseEntity<User> getRandomTopReader(
@@ -128,5 +133,18 @@ public class UserController {
     public ResponseEntity<UserDto> toggleStatus(@PathVariable Long id) {
         UserDto updatedUser = userService.toggleCustomerStatus(id);
         return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping("/update-profile")
+    public ResponseEntity<?> updateProfile(@Valid @RequestBody ProfileUpdate updateDTO) {
+        User currentUser = getCurrentUser(); // Hàm lấy user đang đăng nhập của ông
+        User updatedUser = userService.updateProfile(currentUser.getId(), updateDTO);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    private User getCurrentUser() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại hoặc chưa đăng nhập"));
     }
 }

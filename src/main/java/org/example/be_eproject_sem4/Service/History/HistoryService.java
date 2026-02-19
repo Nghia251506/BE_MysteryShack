@@ -1,16 +1,15 @@
 package org.example.be_eproject_sem4.Service.History;
 
-import lombok.RequiredArgsConstructor;
-import org.example.be_eproject_sem4.Entity.*;
-import org.example.be_eproject_sem4.Repository.*;
+import org.example.be_eproject_sem4.Entity.History;
+import org.example.be_eproject_sem4.Entity.User;
+import org.example.be_eproject_sem4.Repository.HistoryRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -18,10 +17,10 @@ public class HistoryService {
 
     private final HistoryRepository historyRepository;
 
-    public List<History> getRecentHistory(User currentUser) {
-        // Tạo Pageable: trang 0, lấy 10 phần tử, sắp xếp theo createdAt giảm dần
-        Pageable topTen = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+    public Page<History> getRecentHistory(User currentUser, int page, int size) {
+    // Thay vì fix cứng 0 và 10, ông nên nhận page và size từ Controller truyền xuống
+    Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        return historyRepository.findRecentHistory(currentUser.getId(), topTen);
-    }
+    return historyRepository.findRecentHistory(currentUser.getId(), pageable);
+}
 }

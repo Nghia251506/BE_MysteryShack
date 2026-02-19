@@ -1,5 +1,8 @@
 package org.example.be_eproject_sem4.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.example.be_eproject_sem4.Entity.History;
 import org.example.be_eproject_sem4.Entity.ReadingStatus;
 import org.springframework.data.domain.Page;
@@ -8,9 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface HistoryRepository extends JpaRepository<History, Long> {
@@ -21,6 +21,9 @@ public interface HistoryRepository extends JpaRepository<History, Long> {
 
     // Lấy toàn bộ lịch sử xem của một khách hàng (Sắp xếp mới nhất trước)
     List<History> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
+
+    // Tìm lịch sử mà User này là Reader
+    Page<History> findByReaderId(Long readerId, Pageable pageable);
 
     // Lấy lịch sử của khách hàng nhưng có phân trang (Dùng khi list quá dài)
     Page<History> findByCustomerId(Long customerId, Pageable pageable);
@@ -68,7 +71,7 @@ public interface HistoryRepository extends JpaRepository<History, Long> {
 
     // Hoặc dùng Pageable để linh hoạt hơn (Khuyên dùng)
     @Query("SELECT h FROM History h WHERE h.customer.id = :userId OR h.reader.id = :userId")
-    List<History> findRecentHistory(@Param("userId") Long userId, Pageable pageable);
+    Page<History> findRecentHistory(@Param("userId") Long userId, Pageable pageable);
 
     // Thêm dòng này để hỗ trợ Reader
     List<History> findByReaderIdOrderByCreatedAtDesc(Long readerId);

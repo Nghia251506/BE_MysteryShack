@@ -1,21 +1,26 @@
 package org.example.be_eproject_sem4.Controller;
 
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
-import org.example.be_eproject_sem4.Dto.Auth.*;
+import org.example.be_eproject_sem4.Dto.Auth.AuthResponseDto;
+import org.example.be_eproject_sem4.Dto.Auth.ChangePasswordDto;
+import org.example.be_eproject_sem4.Dto.Auth.LoginRequest;
+import org.example.be_eproject_sem4.Dto.Auth.RegisterRequestDto;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Service.Auth.AuthService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping; // Import cái này nhé ông giáo
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.servlet.http.HttpServletResponse; // Import cái này nhé ông giáo
-import java.io.IOException;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -111,5 +116,18 @@ public class AuthController {
         emailService.sendVerificationEmail(user.getEmail(), newToken, user.getId());
 
         return ResponseEntity.ok("Mã xác thực mới đã được gửi vào email của bạn.");
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        authService.requestForgotPassword(email);
+        return ResponseEntity.ok("Một mật chỉ đã được gửi đến email của bạn. Hãy kiểm tra hộp thư!");
+    }
+
+    // 2. Endpoint thực hiện đổi mật khẩu (Khách từ mail về, điền form rồi ấn submit)
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ChangePasswordDto request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok("Mật chú đã được thay đổi thành công. Bạn có thể đăng nhập bằng năng lượng mới!");
     }
 }

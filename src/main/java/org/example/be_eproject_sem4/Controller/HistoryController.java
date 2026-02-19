@@ -1,15 +1,24 @@
 package org.example.be_eproject_sem4.Controller;
 
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.example.be_eproject_sem4.Entity.History;
 import org.example.be_eproject_sem4.Entity.User;
 import org.example.be_eproject_sem4.Repository.HistoryRepository;
 import org.example.be_eproject_sem4.Repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/histories")
@@ -21,20 +30,31 @@ public class HistoryController {
     private final org.example.be_eproject_sem4.Service.History.HistoryService historyService;
 
     /**
-     * 1. GET /api/v1/histories/my-history
-     * Dành cho CUSTOMER: Xem toàn bộ lịch sử xem bói của chính mình
+     * 1. GET /api/v1/histories/my-history Dành cho CUSTOMER: Xem toàn bộ lịch
+     * sử xem bói của chính mình
      */
     @GetMapping("/my-history")
-    public ResponseEntity<List<History>> getMyHistory() {
+    public ResponseEntity<Page<History>> getMyHistory(
+            @PageableDefault(size = 6, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
         User currentUser = getCurrentUser();
-        // Không cần check role, cứ thấy có ID trong đơn là lấy
-        List<History> histories = historyRepository.findByUserId(currentUser.getId());
+        Page<History> histories;
+
+        // Kiểm tra Role (Giả sử ông dùng String hoặc Enum cho Role)
+        // Nếu User có role là READER thì lấy lịch sử họ đi giải bài
+        if (currentUser.getRole().name().equals("READER")) {
+            histories = historyRepository.findByReaderId(currentUser.getId(), pageable);
+        } else {
+            // Mặc định là khách hàng đi xem bài
+            histories = historyRepository.findByCustomerId(currentUser.getId(), pageable);
+        }
+
         return ResponseEntity.ok(histories);
     }
 
     /**
-     * 2. GET /api/v1/histories/reader-jobs
-     * Dành cho READER: Xem danh sách các đơn hàng đã nhận/được giao
+     * 2. GET /api/v1/histories/reader-jobs Dành cho READER: Xem danh sách các
+     * đơn hàng đã nhận/được giao
      */
     @GetMapping("/reader-jobs")
     public ResponseEntity<?> getReaderJobs() {
@@ -50,9 +70,8 @@ public class HistoryController {
     }
 
     /**
-     * 3. GET /api/v1/histories/{id}
-     * Xem chi tiết một bản ghi History.
-     * Bảo mật: Chỉ Customer sở hữu đơn HOẶC Reader nhận đơn đó mới xem được.
+     * 3. GET /api/v1/histories/{id} Xem chi tiết một bản ghi History. Bảo mật:
+     * Chỉ Customer sở hữu đơn HOẶC Reader nhận đơn đó mới xem được.
      */
     @GetMapping("/{id}")
     public ResponseEntity<?> getHistoryDetail(@PathVariable Long id) {
@@ -90,7 +109,7 @@ public class HistoryController {
         // Lưu ý: Đảm bảo HistoryRepository đã có hàm findByRequestId
         History history = historyRepository.findByRequestId(sessionId)
                 .orElseThrow(() -> new RuntimeException(
-                        "Chưa tìm thấy dữ liệu lịch sử cho phiên này (Session ID: " + sessionId + ")"));
+                "Chưa tìm thấy dữ liệu lịch sử cho phiên này (Session ID: " + sessionId + ")"));
 
         // --- CHECK QUYỀN (SECURITY) ---
         // 1. Là khách hàng của đơn này
@@ -109,10 +128,12 @@ public class HistoryController {
     }
 
     @GetMapping("/recent")
-    public ResponseEntity<?> getRecentHistory() {
+    public ResponseEntity<?> getRecentHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         User currentUser = getCurrentUser(); // Hàm lấy user từ SecurityContext của bạn
 
-        List<History> recentHistories = historyService.getRecentHistory(currentUser);
+        Page<History> recentHistories = historyService.getRecentHistory(currentUser, page, size);
 
         return ResponseEntity.ok(recentHistories);
     }
