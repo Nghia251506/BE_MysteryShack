@@ -63,6 +63,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 .queryParam("role", user.getRole().name()) // Thêm .name() để tránh lỗi parse enum
                 .queryParam("id", user.getId())
                 .queryParam("birthDate", user.getBirthDate())
+                .queryParam("profilePicture", user.getProfilePicture())
                 .encode()
                 .build().toUriString();
 
