@@ -49,6 +49,8 @@ public class UserService {
         // 2. Lấy danh sách Reader khả dụng
         List<User> readers = userRepository.findAvailableReadersForMatching(finalExcludes);
         if (readers.isEmpty()) {
+            notificationManager.notifyCustomerSearching(currentCustomerId);
+            System.out.println(">>> [MATCH FAILED] Chuyển Session #" + currentCustomerId + " vào Redis Queue.");
             return null;
         }
 
